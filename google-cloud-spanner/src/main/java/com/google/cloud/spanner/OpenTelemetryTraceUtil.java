@@ -1,5 +1,5 @@
 /*
- * Copyright 2017 Google LLC
+ * Copyright 2023 Google LLC
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -15,7 +15,6 @@
  */
 
 package com.google.cloud.spanner;
-
 
 import com.google.cloud.Timestamp;
 import com.google.spanner.v1.Transaction;
@@ -73,28 +72,21 @@ class OpenTelemetryTraceUtil {
     span.recordException(e);
   }
 
+  static void endSpanWithFailure(Span span, Throwable e) {
+    span.setStatus(StatusCode.ERROR);
+    span.recordException(e);
+    span.end();
+  }
+
+  static Span spanBuilder(Tracer tracer, String spanName) {
+    return tracer.spanBuilder(spanName).startSpan();
+  }
+
   static Span spanBuilderWithExplicitParent(Tracer tracer, String spanName, Span parentSpan) {
     return tracer.spanBuilder(spanName).setParent(Context.root().with(parentSpan)).startSpan();
   }
 
   static void endSpan(Span span) {
     span.end();
-    ;
   }
-
-  // static void endSpanWithFailure(Span span, Throwable e) {
-  //   if (e instanceof SpannerException) {
-  //     endSpanWithFailure(span, (SpannerException) e);
-  //   } else {
-  //     span.setStatus(Status.INTERNAL.withDescription(e.getMessage()));
-  //     span.end(END_SPAN_OPTIONS);
-  //   }
-  // }
-
-  // static void endSpanWithFailure(Span span, SpannerException e) {
-  //   span.setStatus(
-  //       StatusConverter.fromGrpcStatus(e.getErrorCode().getGrpcStatus())
-  //           .withDescription(e.getMessage()));
-  //   span.end(END_SPAN_OPTIONS);
-  // }
 }

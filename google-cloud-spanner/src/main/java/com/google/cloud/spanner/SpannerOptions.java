@@ -1336,7 +1336,12 @@ public class SpannerOptions extends ServiceOptions<Spanner, SpannerOptions> {
   }
 
   public static OpenTelemetry getOpenTelemetry() {
-    return openTelemetry;
+    if (openTelemetry != null) return openTelemetry;
+    else return OpenTelemetry.noop();
+  }
+
+  public static io.opentelemetry.api.trace.Tracer getTracer() {
+    return getOpenTelemetry().getTracer(MetricRegistryConstants.Scope);
   }
 
   /** Returns the default query options to use for the specific database. */

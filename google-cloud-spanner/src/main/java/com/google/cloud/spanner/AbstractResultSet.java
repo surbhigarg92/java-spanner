@@ -84,7 +84,7 @@ import org.threeten.bp.Duration;
 /** Implementation of {@link ResultSet}. */
 abstract class AbstractResultSet<R> extends AbstractStructReader implements ResultSet {
   private static final io.opentelemetry.api.trace.Tracer openTelemetryTracer =
-      SpannerOptions.getOpenTelemetry().getTracer(MetricRegistryConstants.Scope);
+      SpannerOptions.getTracer();
 
   private static final Tracer tracer = Tracing.getTracer();
   private static final com.google.protobuf.Value NULL_VALUE =

@@ -29,13 +29,10 @@ import com.google.common.base.MoreObjects;
 import com.google.common.base.Preconditions;
 import com.google.common.util.concurrent.MoreExecutors;
 import io.opencensus.trace.Span;
-import io.opencensus.trace.Tracer;
-import io.opencensus.trace.Tracing;
 
 /** Implementation of {@link AsyncTransactionManager}. */
 final class AsyncTransactionManagerImpl
     implements CommittableAsyncTransactionManager, SessionTransaction {
-  private static final Tracer tracer = Tracing.getTracer();
 
   private final SessionImpl session;
   private Span span;
