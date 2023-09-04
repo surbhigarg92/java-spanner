@@ -86,6 +86,8 @@ class SessionImpl implements Session {
     void invalidate();
     /** Registers the current span on the transaction. */
     void setSpan(Span span);
+    /** Registers the current opentelemetry span on the transaction. */
+    void setOpenTelemetrySpan(io.opentelemetry.api.trace.Span span);
   }
 
   private final SpannerImpl spanner;
@@ -95,6 +97,7 @@ class SessionImpl implements Session {
   ByteString readyTransactionId;
   private final Map<SpannerRpc.Option, ?> options;
   private Span currentSpan;
+  private io.opentelemetry.api.trace.Span openTelemetryCurrentSpan;
 
   SessionImpl(SpannerImpl spanner, String name, Map<SpannerRpc.Option, ?> options) {
     this.spanner = spanner;
@@ -118,6 +121,14 @@ class SessionImpl implements Session {
 
   Span getCurrentSpan() {
     return currentSpan;
+  }
+
+  void setopenTelemetryCurrentSpan(io.opentelemetry.api.trace.Span span) {
+    openTelemetryCurrentSpan = span;
+  }
+
+  io.opentelemetry.api.trace.Span getopenTelemetryCurrentSpan() {
+    return openTelemetryCurrentSpan;
   }
 
   @Override
@@ -248,6 +259,7 @@ class SessionImpl implements Session {
             .setDefaultQueryOptions(spanner.getDefaultQueryOptions(databaseId))
             .setDefaultPrefetchChunks(spanner.getDefaultPrefetchChunks())
             .setSpan(currentSpan)
+            .setOpenTelemetrySpan(openTelemetryCurrentSpan)
             .setExecutorProvider(spanner.getAsyncExecutorProvider())
             .build());
   }
@@ -264,12 +276,12 @@ class SessionImpl implements Session {
 
   @Override
   public TransactionManager transactionManager(TransactionOption... options) {
-    return new TransactionManagerImpl(this, currentSpan, options);
+    return new TransactionManagerImpl(this, currentSpan, openTelemetryCurrentSpan, options);
   }
 
   @Override
   public AsyncTransactionManagerImpl transactionManagerAsync(TransactionOption... options) {
-    return new AsyncTransactionManagerImpl(this, currentSpan, options);
+    return new AsyncTransactionManagerImpl(this, currentSpan, openTelemetryCurrentSpan, options);
   }
 
   @Override

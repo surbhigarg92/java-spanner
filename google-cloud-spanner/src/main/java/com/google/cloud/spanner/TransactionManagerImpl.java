@@ -31,14 +31,20 @@ final class TransactionManagerImpl implements TransactionManager, SessionTransac
 
   private final SessionImpl session;
   private Span span;
+  private io.opentelemetry.api.trace.Span openTelemetrySpan;
   private final Options options;
 
   private TransactionRunnerImpl.TransactionContextImpl txn;
   private TransactionState txnState;
 
-  TransactionManagerImpl(SessionImpl session, Span span, TransactionOption... options) {
+  TransactionManagerImpl(
+      SessionImpl session,
+      Span span,
+      io.opentelemetry.api.trace.Span openTelemetrySpan,
+      TransactionOption... options) {
     this.session = session;
     this.span = span;
+    this.openTelemetrySpan = openTelemetrySpan;
     this.options = Options.fromTransactionOptions(options);
   }
 
@@ -49,6 +55,11 @@ final class TransactionManagerImpl implements TransactionManager, SessionTransac
   @Override
   public void setSpan(Span span) {
     this.span = span;
+  }
+
+  @Override
+  public void setOpenTelemetrySpan(io.opentelemetry.api.trace.Span span) {
+    this.openTelemetrySpan = span;
   }
 
   @Override

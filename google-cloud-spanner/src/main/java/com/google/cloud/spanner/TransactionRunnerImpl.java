@@ -933,6 +933,7 @@ class TransactionRunnerImpl implements SessionTransaction, TransactionRunner {
   private final SessionImpl session;
   private final Options options;
   private Span span;
+  private io.opentelemetry.api.trace.Span openTelemetrySpan;
   private TransactionContextImpl txn;
   private volatile boolean isValid = true;
 
@@ -951,6 +952,11 @@ class TransactionRunnerImpl implements SessionTransaction, TransactionRunner {
   @Override
   public void setSpan(Span span) {
     this.span = span;
+  }
+
+  @Override
+  public void setOpenTelemetrySpan(io.opentelemetry.api.trace.Span span) {
+    this.openTelemetrySpan = span;
   }
 
   @Nullable

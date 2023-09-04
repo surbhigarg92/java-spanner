@@ -141,6 +141,7 @@ public class ResumableStreamIteratorTest {
             maxBufferSize,
             "",
             null,
+            null,
             SpannerStubSettings.newBuilder().executeStreamingSqlSettings().getRetrySettings(),
             SpannerStubSettings.newBuilder().executeStreamingSqlSettings().getRetryableCodes()) {
           @Override

@@ -2052,7 +2052,6 @@ class SessionPool {
       List<LabelValue> labelValues,
       Attributes attributes) {
     final SessionPoolOptions sessionPoolOptions = spannerOptions.getSessionPoolOptions();
-    spannerOptions.getOpenTelemetry();
 
     // A clock instance is passed in {@code SessionPoolOptions} in order to allow mocking via tests.
     final Clock poolMaintainerClock = sessionPoolOptions.getPoolMaintainerClock();
@@ -2064,7 +2063,7 @@ class SessionPool {
         poolMaintainerClock == null ? new Clock() : poolMaintainerClock,
         Metrics.getMetricRegistry(),
         labelValues,
-        spannerOptions.getOpenTelemetry(),
+        SpannerOptions.getOpenTelemetry(),
         attributes);
   }
 
