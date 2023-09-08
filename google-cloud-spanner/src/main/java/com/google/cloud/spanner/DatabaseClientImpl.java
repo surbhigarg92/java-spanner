@@ -88,7 +88,7 @@ class DatabaseClientImpl implements DatabaseClient {
       throw e;
     } finally {
       span.end(TraceUtil.END_SPAN_OPTIONS);
-      openTelemetrySpan.end();
+      OpenTelemetryTraceUtil.endSpan(openTelemetrySpan);
     }
   }
 
@@ -114,7 +114,7 @@ class DatabaseClientImpl implements DatabaseClient {
       throw e;
     } finally {
       span.end(TraceUtil.END_SPAN_OPTIONS);
-      openTelemetrySpan.end();
+      OpenTelemetryTraceUtil.endSpan(openTelemetrySpan);
     }
   }
 
@@ -153,7 +153,6 @@ class DatabaseClientImpl implements DatabaseClient {
     Span span = tracer.spanBuilder(READ_ONLY_TRANSACTION).startSpan();
     io.opentelemetry.api.trace.Span openTelemetrySpan =
         OpenTelemetryTraceUtil.spanBuilder(openTelemetryTracer, READ_ONLY_TRANSACTION);
-
     try (Scope s = tracer.withSpan(span);
         io.opentelemetry.context.Scope ss = openTelemetrySpan.makeCurrent()) {
       return getSession().singleUseReadOnlyTransaction();
@@ -169,7 +168,6 @@ class DatabaseClientImpl implements DatabaseClient {
     Span span = tracer.spanBuilder(READ_ONLY_TRANSACTION).startSpan();
     io.opentelemetry.api.trace.Span openTelemetrySpan =
         OpenTelemetryTraceUtil.spanBuilder(openTelemetryTracer, READ_ONLY_TRANSACTION);
-
     try (Scope s = tracer.withSpan(span);
         io.opentelemetry.context.Scope ss = openTelemetrySpan.makeCurrent()) {
       return getSession().singleUseReadOnlyTransaction(bound);
@@ -185,7 +183,6 @@ class DatabaseClientImpl implements DatabaseClient {
     Span span = tracer.spanBuilder(READ_ONLY_TRANSACTION).startSpan();
     io.opentelemetry.api.trace.Span openTelemetrySpan =
         OpenTelemetryTraceUtil.spanBuilder(openTelemetryTracer, READ_ONLY_TRANSACTION);
-
     try (Scope s = tracer.withSpan(span);
         io.opentelemetry.context.Scope ss = openTelemetrySpan.makeCurrent()) {
       return getSession().readOnlyTransaction();
@@ -201,7 +198,6 @@ class DatabaseClientImpl implements DatabaseClient {
     Span span = tracer.spanBuilder(READ_ONLY_TRANSACTION).startSpan();
     io.opentelemetry.api.trace.Span openTelemetrySpan =
         OpenTelemetryTraceUtil.spanBuilder(openTelemetryTracer, READ_ONLY_TRANSACTION);
-
     try (Scope s = tracer.withSpan(span);
         io.opentelemetry.context.Scope ss = openTelemetrySpan.makeCurrent()) {
       return getSession().readOnlyTransaction(bound);
@@ -217,7 +213,6 @@ class DatabaseClientImpl implements DatabaseClient {
     Span span = tracer.spanBuilder(READ_WRITE_TRANSACTION).startSpan();
     io.opentelemetry.api.trace.Span openTelemetrySpan =
         OpenTelemetryTraceUtil.spanBuilder(openTelemetryTracer, READ_WRITE_TRANSACTION);
-
     try (Scope s = tracer.withSpan(span);
         io.opentelemetry.context.Scope ss = openTelemetrySpan.makeCurrent()) {
       return getSession().readWriteTransaction(options);
@@ -227,7 +222,7 @@ class DatabaseClientImpl implements DatabaseClient {
       throw e;
     } finally {
       span.end(TraceUtil.END_SPAN_OPTIONS);
-      openTelemetrySpan.end();
+      OpenTelemetryTraceUtil.endSpan(openTelemetrySpan);
     }
   }
 
@@ -236,7 +231,6 @@ class DatabaseClientImpl implements DatabaseClient {
     Span span = tracer.spanBuilder(READ_WRITE_TRANSACTION).startSpan();
     io.opentelemetry.api.trace.Span openTelemetrySpan =
         OpenTelemetryTraceUtil.spanBuilder(openTelemetryTracer, READ_WRITE_TRANSACTION);
-
     try (Scope s = tracer.withSpan(span);
         io.opentelemetry.context.Scope ss = openTelemetrySpan.makeCurrent()) {
       return getSession().transactionManager(options);
@@ -252,7 +246,6 @@ class DatabaseClientImpl implements DatabaseClient {
     Span span = tracer.spanBuilder(READ_WRITE_TRANSACTION).startSpan();
     io.opentelemetry.api.trace.Span openTelemetrySpan =
         OpenTelemetryTraceUtil.spanBuilder(openTelemetryTracer, READ_WRITE_TRANSACTION);
-
     try (Scope s = tracer.withSpan(span);
         io.opentelemetry.context.Scope ss = openTelemetrySpan.makeCurrent()) {
       return getSession().runAsync(options);
@@ -268,7 +261,6 @@ class DatabaseClientImpl implements DatabaseClient {
     Span span = tracer.spanBuilder(READ_WRITE_TRANSACTION).startSpan();
     io.opentelemetry.api.trace.Span openTelemetrySpan =
         OpenTelemetryTraceUtil.spanBuilder(openTelemetryTracer, READ_WRITE_TRANSACTION);
-
     try (Scope s = tracer.withSpan(span);
         io.opentelemetry.context.Scope ss = openTelemetrySpan.makeCurrent()) {
       return getSession().transactionManagerAsync(options);
@@ -284,7 +276,6 @@ class DatabaseClientImpl implements DatabaseClient {
     Span span = tracer.spanBuilder(PARTITION_DML_TRANSACTION).startSpan();
     io.opentelemetry.api.trace.Span openTelemetrySpan =
         OpenTelemetryTraceUtil.spanBuilder(openTelemetryTracer, PARTITION_DML_TRANSACTION);
-
     try (Scope s = tracer.withSpan(span);
         io.opentelemetry.context.Scope ss = openTelemetrySpan.makeCurrent()) {
       return runWithSessionRetry(session -> session.executePartitionedUpdate(stmt, options));

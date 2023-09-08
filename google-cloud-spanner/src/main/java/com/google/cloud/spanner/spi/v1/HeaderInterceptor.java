@@ -81,7 +81,6 @@ class HeaderInterceptor implements ClientInterceptor {
             new SimpleForwardingClientCallListener<RespT>(responseListener) {
               @Override
               public void onHeaders(Metadata metadata) {
-
                 processHeader(metadata, tagContext, attributes);
                 super.onHeaders(metadata);
               }
@@ -103,14 +102,14 @@ class HeaderInterceptor implements ClientInterceptor {
           measureMap.put(SPANNER_GFE_HEADER_MISSING_COUNT, 0L);
           measureMap.record(tagContext);
 
-          SpannerRpcMetrics.gfeLatencyRecorder(latency, attributes);
-          SpannerRpcMetrics.gfeHeaderMissingCountRecorder(0L, attributes);
+          SpannerRpcMetrics.recordGfeLatency(latency, attributes);
+          SpannerRpcMetrics.recordGfeHeaderMissingCount(0L, attributes);
         } catch (NumberFormatException e) {
           LOGGER.log(LEVEL, "Invalid server-timing object in header", matcher.group("dur"));
         }
       }
     } else {
-      SpannerRpcMetrics.gfeHeaderMissingCountRecorder(1L, attributes);
+      SpannerRpcMetrics.recordGfeHeaderMissingCount(1L, attributes);
       measureMap.put(SPANNER_GFE_HEADER_MISSING_COUNT, 1L).record(tagContext);
     }
   }

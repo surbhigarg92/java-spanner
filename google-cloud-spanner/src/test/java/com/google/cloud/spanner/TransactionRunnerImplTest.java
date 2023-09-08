@@ -289,7 +289,7 @@ public class TransactionRunnerImplTest {
           }
         };
     session.setCurrentSpan(mock(Span.class));
-    session.setopenTelemetryCurrentSpan(mock(io.opentelemetry.api.trace.Span.class));
+    session.setCurrentOpenTelemetrySpan(mock(io.opentelemetry.api.trace.Span.class));
     TransactionRunnerImpl runner = new TransactionRunnerImpl(session);
     runner.setSpan(mock(Span.class));
     runner.setOpenTelemetrySpan(mock(io.opentelemetry.api.trace.Span.class));

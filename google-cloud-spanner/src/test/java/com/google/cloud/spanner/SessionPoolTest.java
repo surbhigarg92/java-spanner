@@ -1649,10 +1649,8 @@ public class SessionPoolTest extends BaseSessionPoolTest {
       clock.currentTimeMillis = System.currentTimeMillis();
 
       InMemoryMetricReader inMemoryMetricReader = InMemoryMetricReader.create();
-
       SdkMeterProvider sdkMeterProvider =
           SdkMeterProvider.builder().registerMetricReader(inMemoryMetricReader).build();
-
       OpenTelemetry openTelemetry =
           OpenTelemetrySdk.builder().setMeterProvider(sdkMeterProvider).build();
 
@@ -1677,19 +1675,14 @@ public class SessionPoolTest extends BaseSessionPoolTest {
       session2.get();
 
       Collection<MetricData> metricDataCollection = inMemoryMetricReader.collectAllMetrics();
-
       // Acquired sessions are 2.
       verifyMetricData(metricDataCollection, NUM_ACQUIRED_SESSIONS_NAME, 1, 2L);
-
       // Max in use session are 2.
       verifyMetricData(metricDataCollection, MAX_IN_USE_SESSIONS_NAME, 1, 2D);
-
       // Max Allowed sessions should be 3
       verifyMetricData(metricDataCollection, MAX_ALLOWED_SESSIONS_NAME, 1, 3D);
-
       // Released sessions should be 0
       verifyMetricData(metricDataCollection, NUM_RELEASED_SESSIONS_NAME, 1, 0L);
-
       // Num sessions in pool
       verifyMetricData(
           metricDataCollection, NUM_SESSIONS_IN_POOL_NAME, 1, NUM_SESSIONS_IN_USE_NAME, 2);
@@ -1726,19 +1719,14 @@ public class SessionPoolTest extends BaseSessionPoolTest {
 
       // Max Allowed sessions should be 3
       verifyMetricData(metricDataCollection, MAX_ALLOWED_SESSIONS_NAME, 1, 3D);
-
       // Session timeouts 1
       verifyMetricData(metricDataCollection, GET_SESSION_TIMEOUTS_NAME, 1, 1L);
-
       // Max in use session are 2.
       verifyMetricData(metricDataCollection, MAX_IN_USE_SESSIONS_NAME, 1, 3D);
-
       // Session released 2
       verifyMetricData(metricDataCollection, NUM_RELEASED_SESSIONS_NAME, 1, 2L);
-
       // Acquired sessions are 4.
       verifyMetricData(metricDataCollection, NUM_ACQUIRED_SESSIONS_NAME, 1, 4L);
-
       // Num sessions in pool
       verifyMetricData(
           metricDataCollection, NUM_SESSIONS_IN_POOL_NAME, 1, NUM_SESSIONS_IN_USE_NAME, 2);
@@ -1753,11 +1741,11 @@ public class SessionPoolTest extends BaseSessionPoolTest {
         metricDataCollection.stream()
             .filter(x -> x.getName().equals(metricName))
             .collect(Collectors.toList());
-    ;
-    assertThat(metricDataFiltered.size()).isEqualTo(size);
+
+    assertEquals(metricDataFiltered.size(), size);
     MetricData metricData = metricDataFiltered.stream().findFirst().get();
-    assertThat(metricData.getLongSumData().getPoints().stream().findFirst().get().getValue())
-        .isEqualTo(value);
+    assertEquals(
+        metricData.getLongSumData().getPoints().stream().findFirst().get().getValue(), value);
   }
 
   private static void verifyMetricData(
@@ -1766,11 +1754,13 @@ public class SessionPoolTest extends BaseSessionPoolTest {
         metricDataCollection.stream()
             .filter(x -> x.getName().equals(metricName))
             .collect(Collectors.toList());
-    ;
-    assertThat(metricDataFiltered.size()).isEqualTo(size);
+
+    assertEquals(metricDataFiltered.size(), size);
     MetricData metricData = metricDataFiltered.stream().findFirst().get();
-    assertThat(metricData.getDoubleGaugeData().getPoints().stream().findFirst().get().getValue())
-        .isEqualTo(value);
+    assertEquals(
+        metricData.getDoubleGaugeData().getPoints().stream().findFirst().get().getValue(),
+        value,
+        0.0);
   }
 
   private static void verifyMetricData(
@@ -1783,19 +1773,18 @@ public class SessionPoolTest extends BaseSessionPoolTest {
         metricDataCollection.stream()
             .filter(x -> x.getName().equals(metricName))
             .collect(Collectors.toList());
-    ;
-    assertThat(metricDataFiltered.size()).isEqualTo(size);
+
+    assertEquals(metricDataFiltered.size(), size);
 
     MetricData metricData = metricDataFiltered.stream().findFirst().get();
 
-    // Attributes attributes =
-    assertThat(
-            metricData.getLongSumData().getPoints().stream()
-                .filter(x -> x.getAttributes().asMap().containsValue(labelName))
-                .findFirst()
-                .get()
-                .getValue())
-        .isEqualTo(value);
+    assertEquals(
+        metricData.getLongSumData().getPoints().stream()
+            .filter(x -> x.getAttributes().asMap().containsValue(labelName))
+            .findFirst()
+            .get()
+            .getValue(),
+        value);
   }
 
   @Test

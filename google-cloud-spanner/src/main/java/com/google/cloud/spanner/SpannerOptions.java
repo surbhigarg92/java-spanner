@@ -602,7 +602,6 @@ public class SpannerOptions extends ServiceOptions<Spanner, SpannerOptions> {
     asyncExecutorProvider = builder.asyncExecutorProvider;
     compressorName = builder.compressorName;
     leaderAwareRoutingEnabled = builder.leaderAwareRoutingEnabled;
-    // openTelemetry = builder.openTelemetry;
   }
 
   /**
@@ -704,7 +703,6 @@ public class SpannerOptions extends ServiceOptions<Spanner, SpannerOptions> {
     private String compressorName;
     private String emulatorHost = System.getenv("SPANNER_EMULATOR_HOST");
     private boolean leaderAwareRoutingEnabled = true;
-    // private OpenTelemetry openTelemetry = null;
 
     private Builder() {
       // Manually set retry and polling settings that work.
@@ -1215,7 +1213,7 @@ public class SpannerOptions extends ServiceOptions<Spanner, SpannerOptions> {
             this.grpcGcpExtensionEnabled ? GRPC_GCP_ENABLED_DEFAULT_CHANNELS : DEFAULT_CHANNELS;
       }
 
-      SpannerRpcMetrics.initializeRPCMetrics(this.openTelemetry);
+      SpannerRpcMetrics.initializeRPCMetrics(openTelemetry);
       return new SpannerOptions(this);
     }
   }
@@ -1337,8 +1335,11 @@ public class SpannerOptions extends ServiceOptions<Spanner, SpannerOptions> {
   }
 
   public static OpenTelemetry getOpenTelemetry() {
-    if (openTelemetry != null) return openTelemetry;
-    else return OpenTelemetry.noop();
+    if (openTelemetry != null) {
+      return openTelemetry;
+    } else {
+      return OpenTelemetry.noop();
+    }
   }
 
   public static io.opentelemetry.api.trace.Tracer getTracer() {

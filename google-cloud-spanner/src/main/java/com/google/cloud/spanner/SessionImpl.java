@@ -125,11 +125,11 @@ class SessionImpl implements Session {
     return currentSpan;
   }
 
-  void setopenTelemetryCurrentSpan(io.opentelemetry.api.trace.Span span) {
+  void setCurrentOpenTelemetrySpan(io.opentelemetry.api.trace.Span span) {
     openTelemetryCurrentSpan = span;
   }
 
-  io.opentelemetry.api.trace.Span getopenTelemetryCurrentSpan() {
+  io.opentelemetry.api.trace.Span getCurrentOpenTelemetrySpan() {
     return openTelemetryCurrentSpan;
   }
 
@@ -209,7 +209,7 @@ class SessionImpl implements Session {
       throw e;
     } finally {
       span.end(TraceUtil.END_SPAN_OPTIONS);
-      openTelemetrySpan.end();
+      OpenTelemetryTraceUtil.endSpan(openTelemetrySpan);
     }
   }
 
@@ -319,7 +319,7 @@ class SessionImpl implements Session {
       throw e;
     } finally {
       span.end(TraceUtil.END_SPAN_OPTIONS);
-      openTelemetrySpan.end();
+      OpenTelemetryTraceUtil.endSpan(openTelemetrySpan);
     }
   }
 
@@ -342,7 +342,6 @@ class SessionImpl implements Session {
     final Span span = tracer.spanBuilder(SpannerImpl.BEGIN_TRANSACTION).startSpan();
     final io.opentelemetry.api.trace.Span openTelemetrySpan =
         OpenTelemetryTraceUtil.spanBuilder(openTelemetryTracer, SpannerImpl.BEGIN_TRANSACTION);
-
     final BeginTransactionRequest request =
         BeginTransactionRequest.newBuilder()
             .setSession(name)
@@ -360,7 +359,7 @@ class SessionImpl implements Session {
                   ErrorCode.INTERNAL, "Missing id in transaction\n" + getName());
             }
             span.end(TraceUtil.END_SPAN_OPTIONS);
-            openTelemetrySpan.end();
+            OpenTelemetryTraceUtil.endSpan(openTelemetrySpan);
             res.set(txn.getId());
           } catch (ExecutionException e) {
             TraceUtil.endSpanWithFailure(span, e);

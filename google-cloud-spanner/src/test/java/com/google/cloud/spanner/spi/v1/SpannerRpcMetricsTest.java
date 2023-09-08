@@ -19,8 +19,7 @@ package com.google.cloud.spanner.spi.v1;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assume.assumeFalse;
 
-import com.google.auth.oauth2.AccessToken;
-import com.google.auth.oauth2.OAuth2Credentials;
+import com.google.cloud.NoCredentials;
 import com.google.cloud.spanner.DatabaseClient;
 import com.google.cloud.spanner.DatabaseId;
 import com.google.cloud.spanner.MockSpannerServiceImpl;
@@ -38,7 +37,6 @@ import io.grpc.Server;
 import io.grpc.ServerCall;
 import io.grpc.ServerCallHandler;
 import io.grpc.ServerInterceptor;
-import io.grpc.auth.MoreCallCredentials;
 import io.grpc.netty.shaded.io.grpc.netty.NettyServerBuilder;
 import io.opentelemetry.api.OpenTelemetry;
 import io.opentelemetry.sdk.OpenTelemetrySdk;
@@ -51,7 +49,6 @@ import java.util.Collection;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Random;
-import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Collectors;
 import org.junit.After;
@@ -63,21 +60,6 @@ import org.junit.runners.JUnit4;
 
 @RunWith(JUnit4.class)
 public class SpannerRpcMetricsTest {
-
-  private static final String STATIC_OAUTH_TOKEN = "STATIC_TEST_OAUTH_TOKEN";
-  private static final String VARIABLE_OAUTH_TOKEN = "VARIABLE_TEST_OAUTH_TOKEN";
-  private static final OAuth2Credentials STATIC_CREDENTIALS =
-      OAuth2Credentials.create(
-          new AccessToken(
-              STATIC_OAUTH_TOKEN,
-              new java.util.Date(
-                  System.currentTimeMillis() + TimeUnit.MILLISECONDS.convert(1L, TimeUnit.DAYS))));
-  private static final OAuth2Credentials VARIABLE_CREDENTIALS =
-      OAuth2Credentials.create(
-          new AccessToken(
-              VARIABLE_OAUTH_TOKEN,
-              new java.util.Date(
-                  System.currentTimeMillis() + TimeUnit.MILLISECONDS.convert(1L, TimeUnit.DAYS))));
 
   private static MockSpannerServiceImpl mockSpanner;
   private static Server server;
@@ -96,9 +78,6 @@ public class SpannerRpcMetricsTest {
   private static String instanceId = "fake-instance";
   private static String databaseId = "fake-database";
   private static String projectId = "fake-project";
-
-  private static final long WAIT_FOR_METRICS_TIME_MS = 1_000;
-  private static final int MAXIMUM_RETRIES = 5;
 
   private static AtomicInteger fakeServerTiming = new AtomicInteger(new Random().nextInt(1000) + 1);
 
@@ -135,8 +114,6 @@ public class SpannerRpcMetricsTest {
       Statement.of("UPDATE FOO SET BAR=1 WHERE BAZ=2");
 
   private static InMemoryMetricReader inMemoryMetricReader;
-
-  private static InMemoryMetricReader inMemoryMetricReaderNoHeader;
 
   @BeforeClass
   public static void startServer() throws IOException {
@@ -225,7 +202,6 @@ public class SpannerRpcMetricsTest {
         .readWriteTransaction()
         .run(transaction -> transaction.executeUpdate(UPDATE_FOO_STATEMENT));
 
-    ;
     double latency =
         getGfeLatencyMetric(getMetricData("gfe_latency"), "google.spanner.v1.Spanner/ExecuteSql");
     assertEquals(fakeServerTiming.get(), latency, 0);
@@ -259,24 +235,18 @@ public class SpannerRpcMetricsTest {
     String endpoint = address.getHostString() + ":" + server.getPort();
     return SpannerOptions.newBuilder()
         .setProjectId("[PROJECT]")
-        // Set a custom channel configurator to allow http instead of https.
         .setChannelConfigurator(
             input -> {
               input.usePlaintext();
               return input;
             })
         .setHost("http://" + endpoint)
-        // Set static credentials that will return the static OAuth test token.
-        .setCredentials(STATIC_CREDENTIALS)
-        // Also set a CallCredentialsProvider. These credentials should take precedence above
-        // the static credentials.
-        .setCallCredentialsProvider(() -> MoreCallCredentials.from(VARIABLE_CREDENTIALS))
+        .setCredentials(NoCredentials.getInstance())
         .setOpenTelemetry(openTelemetry)
         .build();
   }
 
   private long getHeaderLatencyMetric(MetricData metricData, String methodName) {
-    // Attributes attributes =
     return metricData.getLongSumData().getPoints().stream()
         .filter(x -> x.getAttributes().asMap().containsValue(methodName))
         .findFirst()
@@ -285,7 +255,6 @@ public class SpannerRpcMetricsTest {
   }
 
   private double getGfeLatencyMetric(MetricData metricData, String methodName) {
-    // Attributes attributes =
     return metricData.getHistogramData().getPoints().stream()
         .filter(x -> x.getAttributes().asMap().containsValue(methodName))
         .findFirst()

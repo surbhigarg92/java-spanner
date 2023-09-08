@@ -28,9 +28,6 @@ import io.opentelemetry.context.Context;
 /** Utility methods for tracing. */
 class OpenTelemetryTraceUtil {
 
-  // static final EndSpanOptions END_SPAN_OPTIONS =
-  //     EndSpanOptions.builder().setSampleToLocalSpanStore(true).build();
-
   static Attributes getTransactionAnnotations(Transaction t) {
     return Attributes.builder()
         .put("Id", t.getId().toStringUtf8())
@@ -50,6 +47,10 @@ class OpenTelemetryTraceUtil {
     return Attributes.builder()
         .put("Status", ((SpannerException) e).getErrorCode().toString())
         .build();
+  }
+
+  static void addEvent(Span span, String eventName) {
+    span.addEvent(eventName);
   }
 
   static void addEvent(Span span, String eventName, Attributes attributes) {

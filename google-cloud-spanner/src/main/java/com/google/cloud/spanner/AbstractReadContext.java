@@ -71,7 +71,6 @@ abstract class AbstractReadContext
     private SpannerRpc rpc;
     private io.opentelemetry.api.trace.Span openTelemetrySpan =
         io.opentelemetry.api.trace.Span.fromContext(Context.current());
-
     private Span span = Tracing.getTracer().getCurrentSpan();
     private int defaultPrefetchChunks = SpannerOptions.Builder.DEFAULT_PREFETCH_CHUNKS;
     private QueryOptions defaultQueryOptions = SpannerOptions.Builder.DEFAULT_QUERY_OPTIONS;
@@ -357,8 +356,7 @@ abstract class AbstractReadContext
         if (transactionId != null) {
           return;
         }
-
-        OpenTelemetryTraceUtil.addEvent(openTelemetrySpan, "Creating Transaction", null);
+        OpenTelemetryTraceUtil.addEvent(openTelemetrySpan, "Creating Transaction");
         span.addAnnotation("Creating Transaction");
         try {
           TransactionOptions.Builder options = TransactionOptions.newBuilder();

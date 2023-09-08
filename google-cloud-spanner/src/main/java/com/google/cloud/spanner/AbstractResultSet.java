@@ -85,7 +85,6 @@ import org.threeten.bp.Duration;
 abstract class AbstractResultSet<R> extends AbstractStructReader implements ResultSet {
   private static final io.opentelemetry.api.trace.Tracer openTelemetryTracer =
       SpannerOptions.getTracer();
-
   private static final Tracer tracer = Tracing.getTracer();
   private static final com.google.protobuf.Value NULL_VALUE =
       com.google.protobuf.Value.newBuilder().setNullValue(NullValue.NULL_VALUE).build();
@@ -1248,7 +1247,6 @@ abstract class AbstractResultSet<R> extends AbstractStructReader implements Resu
               Attributes.builder()
                   .put("ResumeToken", resumeToken == null ? "null" : resumeToken.toStringUtf8())
                   .build());
-
           span.addAnnotation(
               "Starting/Resuming stream",
               ImmutableMap.of(
@@ -1300,7 +1298,6 @@ abstract class AbstractResultSet<R> extends AbstractStructReader implements Resu
                 openTelemetrySpan,
                 "Stream broken. Safe to retry",
                 OpenTelemetryTraceUtil.getExceptionAnnotations(spannerException));
-
             span.addAnnotation(
                 "Stream broken. Safe to retry",
                 TraceUtil.getExceptionAnnotations(spannerException));

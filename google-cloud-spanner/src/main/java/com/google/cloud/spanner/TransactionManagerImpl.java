@@ -151,7 +151,7 @@ final class TransactionManagerImpl implements TransactionManager, SessionTransac
       }
     } finally {
       span.end(TraceUtil.END_SPAN_OPTIONS);
-      openTelemetrySpan.end();
+      OpenTelemetryTraceUtil.endSpan(openTelemetrySpan);
     }
   }
 

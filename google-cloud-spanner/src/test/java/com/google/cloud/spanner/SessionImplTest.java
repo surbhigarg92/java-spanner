@@ -130,8 +130,7 @@ public class SessionImplTest {
     session = spanner.getSessionClient(db).createSession();
     ((SessionImpl) session).setCurrentSpan(mock(Span.class));
     ((SessionImpl) session)
-        .setopenTelemetryCurrentSpan(mock(io.opentelemetry.api.trace.Span.class));
-
+        .setCurrentOpenTelemetrySpan(mock(io.opentelemetry.api.trace.Span.class));
     // We expect the same options, "options", on all calls on "session".
     options = optionsCaptor.getValue();
   }

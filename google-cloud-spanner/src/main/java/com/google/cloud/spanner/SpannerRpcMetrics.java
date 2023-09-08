@@ -15,41 +15,49 @@
  */
 package com.google.cloud.spanner;
 
+import com.google.api.core.InternalApi;
 import io.opentelemetry.api.OpenTelemetry;
 import io.opentelemetry.api.common.Attributes;
 import io.opentelemetry.api.metrics.LongCounter;
 import io.opentelemetry.api.metrics.LongHistogram;
 import io.opentelemetry.api.metrics.Meter;
 
+@InternalApi
 public class SpannerRpcMetrics {
   private static LongHistogram gfeLatencies = null;
   private static LongCounter gfeHeaderMissingCount = null;
 
   static void initializeRPCMetrics(OpenTelemetry openTelemetry) {
+    if (openTelemetry == null) {
+      return;
+    }
+    Meter meter = openTelemetry.getMeter(MetricRegistryConstants.Scope);
+    gfeLatencies =
+        meter
+            .histogramBuilder(MetricRegistryConstants.SPANNER_GFE_LATENCY_NAME)
+            .ofLongs()
+            .setDescription(MetricRegistryConstants.SPANNER_GFE_LATENCY_DESCRIPTION)
+            .setUnit(MetricRegistryConstants.MILLISECOND)
+            .build();
+    gfeHeaderMissingCount =
+        meter
+            .counterBuilder(MetricRegistryConstants.SPANNER_GFE_HEADER_MISSING_COUNT_NAME)
+            .setDescription(MetricRegistryConstants.SPANNER_GFE_HEADER_MISSING_COUNT_DESCRIPTION)
+            .setUnit(MetricRegistryConstants.COUNT)
+            .build();
+  }
 
-    if (openTelemetry != null) {
-      Meter meter = openTelemetry.getMeter(MetricRegistryConstants.Scope);
-      gfeLatencies =
-          meter
-              .histogramBuilder(MetricRegistryConstants.SPANNER_GFE_LATENCY_NAME)
-              .ofLongs()
-              .setDescription(MetricRegistryConstants.SPANNER_GFE_LATENCY_DESCRIPTION)
-              .setUnit(MetricRegistryConstants.MILLISECOND)
-              .build();
-      gfeHeaderMissingCount =
-          meter
-              .counterBuilder(MetricRegistryConstants.SPANNER_GFE_HEADER_MISSING_COUNT_NAME)
-              .setDescription(MetricRegistryConstants.SPANNER_GFE_HEADER_MISSING_COUNT_DESCRIPTION)
-              .setUnit(MetricRegistryConstants.COUNT)
-              .build();
+  @InternalApi
+  public static void recordGfeLatency(long value, Attributes attributes) {
+    if (gfeLatencies != null) {
+      gfeLatencies.record(value, attributes);
     }
   }
 
-  public static void gfeLatencyRecorder(long value, Attributes attributes) {
-    if (gfeLatencies != null) gfeLatencies.record(value, attributes);
-  }
-
-  public static void gfeHeaderMissingCountRecorder(long value, Attributes attributes) {
-    if (gfeHeaderMissingCount != null) gfeHeaderMissingCount.add(value, attributes);
+  @InternalApi
+  public static void recordGfeHeaderMissingCount(long value, Attributes attributes) {
+    if (gfeHeaderMissingCount != null) {
+      gfeHeaderMissingCount.add(value, attributes);
+    }
   }
 }

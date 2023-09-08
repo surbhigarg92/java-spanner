@@ -133,7 +133,6 @@ class SessionPool {
   private static final Tracer tracer = Tracing.getTracer();
   private static final io.opentelemetry.api.trace.Tracer openTelemetryTracer =
       SpannerOptions.getTracer();
-
   static final String WAIT_FOR_SESSION = "SessionPool.WaitForSession";
   static final ImmutableSet<ErrorCode> SHOULD_STOP_PREPARE_SESSIONS_ERROR_CODES =
       ImmutableSet.of(
@@ -1598,9 +1597,9 @@ class SessionPool {
       markUsed();
       final Span previousSpan = delegate.getCurrentSpan();
       final io.opentelemetry.api.trace.Span openTelemetrySpan =
-          delegate.getopenTelemetryCurrentSpan();
+          delegate.getCurrentOpenTelemetrySpan();
       delegate.setCurrentSpan(BlankSpan.INSTANCE);
-      delegate.setopenTelemetryCurrentSpan(io.opentelemetry.api.trace.Span.getInvalid());
+      delegate.setCurrentOpenTelemetrySpan(io.opentelemetry.api.trace.Span.getInvalid());
       try (ResultSet resultSet =
           delegate
               .singleUse(TimestampBound.ofMaxStaleness(60, TimeUnit.SECONDS))
@@ -1608,7 +1607,7 @@ class SessionPool {
         resultSet.next();
       } finally {
         delegate.setCurrentSpan(previousSpan);
-        delegate.setopenTelemetryCurrentSpan(openTelemetrySpan);
+        delegate.setCurrentOpenTelemetrySpan(openTelemetrySpan);
       }
     }
 
@@ -1642,7 +1641,7 @@ class SessionPool {
 
     private void markBusy(Span span, io.opentelemetry.api.trace.Span openTelemetrySpan) {
       this.delegate.setCurrentSpan(span);
-      this.delegate.setopenTelemetryCurrentSpan(openTelemetrySpan);
+      this.delegate.setCurrentOpenTelemetrySpan(openTelemetrySpan);
       this.state = SessionState.BUSY;
     }
 
@@ -1692,7 +1691,7 @@ class SessionPool {
             numWaiterTimeouts.incrementAndGet();
             tracer.getCurrentSpan().setStatus(Status.DEADLINE_EXCEEDED);
             io.opentelemetry.api.trace.Span.fromContext(io.opentelemetry.context.Context.current())
-                .setStatus(StatusCode.ERROR, "DeadlineExceeded");
+                .setStatus(StatusCode.ERROR, "DEADLINE_EXCEEDED");
             currentTimeout = Math.min(currentTimeout * 2, MAX_SESSION_WAIT_TIMEOUT);
           } else {
             return s;
@@ -1703,7 +1702,7 @@ class SessionPool {
           throw e;
         } finally {
           span.end(TraceUtil.END_SPAN_OPTIONS);
-          openTelemetrySpan.end();
+          OpenTelemetryTraceUtil.endSpan(openTelemetrySpan);
         }
       }
     }
@@ -2145,7 +2144,6 @@ class SessionPool {
         null);
   }
 
-  // main
   static SessionPool createPool(
       SessionPoolOptions poolOptions,
       String databaseRole,
@@ -2386,20 +2384,19 @@ class SessionPool {
     Span span = Tracing.getTracer().getCurrentSpan();
     io.opentelemetry.api.trace.Span openTelemetrySpan =
         io.opentelemetry.api.trace.Span.fromContext(io.opentelemetry.context.Context.current());
-
     span.addAnnotation("Acquiring session");
-    OpenTelemetryTraceUtil.addEvent(openTelemetrySpan, "Acquiring session", null);
+    OpenTelemetryTraceUtil.addEvent(openTelemetrySpan, "Acquiring session");
     WaiterFuture waiter = null;
     PooledSession sess = null;
     synchronized (lock) {
       if (closureFuture != null) {
         span.addAnnotation("Pool has been closed");
-        OpenTelemetryTraceUtil.addEvent(openTelemetrySpan, "Pool has been closed", null);
+        OpenTelemetryTraceUtil.addEvent(openTelemetrySpan, "Pool has been closed");
         throw new IllegalStateException("Pool has been closed", closedException);
       }
       if (resourceNotFoundException != null) {
         span.addAnnotation("Database has been deleted");
-        OpenTelemetryTraceUtil.addEvent(openTelemetrySpan, "Database has been deleted", null);
+        OpenTelemetryTraceUtil.addEvent(openTelemetrySpan, "Database has been deleted");
         throw SpannerExceptionFactory.newSpannerException(
             ErrorCode.NOT_FOUND,
             String.format(
@@ -2410,13 +2407,13 @@ class SessionPool {
       sess = sessions.poll();
       if (sess == null) {
         span.addAnnotation("No session available");
-        OpenTelemetryTraceUtil.addEvent(openTelemetrySpan, "No session available", null);
+        OpenTelemetryTraceUtil.addEvent(openTelemetrySpan, "No session available");
         maybeCreateSession();
         waiter = new WaiterFuture();
         waiters.add(waiter);
       } else {
         span.addAnnotation("Acquired session");
-        OpenTelemetryTraceUtil.addEvent(openTelemetrySpan, "Acquired session", null);
+        OpenTelemetryTraceUtil.addEvent(openTelemetrySpan, "Acquired session");
       }
       return checkoutSession(span, openTelemetrySpan, sess, waiter);
     }
@@ -2433,8 +2430,7 @@ class SessionPool {
           Level.FINE,
           "No session available in the pool. Blocking for one to become available/created");
       span.addAnnotation("Waiting for a session to come available");
-      OpenTelemetryTraceUtil.addEvent(
-          openTelemetrySpan, "Waiting for a session to come available", null);
+      OpenTelemetryTraceUtil.addEvent(openTelemetrySpan, "Waiting for a session to come available");
       sessionFuture = waiter;
     } else {
       SettableFuture<PooledSession> fut = SettableFuture.create();
@@ -2480,17 +2476,15 @@ class SessionPool {
     Span span = Tracing.getTracer().getCurrentSpan();
     io.opentelemetry.api.trace.Span openTelemetrySpan =
         io.opentelemetry.api.trace.Span.fromContext(io.opentelemetry.context.Context.current());
-
     synchronized (lock) {
       if (numWaiters() >= numSessionsBeingCreated) {
         if (canCreateSession()) {
           span.addAnnotation("Creating sessions");
-          OpenTelemetryTraceUtil.addEvent(openTelemetrySpan, "Creating sessions", null);
+          OpenTelemetryTraceUtil.addEvent(openTelemetrySpan, "Creating sessions");
           createSessions(getAllowedCreateSessions(options.getIncStep()), false);
         } else if (options.isFailIfPoolExhausted()) {
           span.addAnnotation("Pool exhausted. Failing");
-          OpenTelemetryTraceUtil.addEvent(openTelemetrySpan, "Pool exhausted. Failing", null);
-
+          OpenTelemetryTraceUtil.addEvent(openTelemetrySpan, "Pool exhausted. Failing");
           // throw specific exception
           throw newSpannerException(
               ErrorCode.RESOURCE_EXHAUSTED,
@@ -2964,74 +2958,74 @@ class SessionPool {
 
   private void initOpenTelemetryMetricsCollection(
       OpenTelemetry openTelemetry, Attributes attributes) {
-
-    if (openTelemetry != null) {
-      Meter meter = openTelemetry.getMeter(MetricRegistryConstants.Scope);
-
-      meter
-          .gaugeBuilder(MAX_ALLOWED_SESSIONS_NAME)
-          .setDescription(MAX_ALLOWED_SESSIONS_DESCRIPTION)
-          .setUnit(COUNT)
-          .buildWithCallback(
-              measurement -> {
-                measurement.record(options.getMaxSessions(), attributes);
-              });
-
-      meter
-          .gaugeBuilder(MAX_IN_USE_SESSIONS_NAME)
-          .setDescription(MAX_IN_USE_SESSIONS_DESCRIPTION)
-          .setUnit(COUNT)
-          .buildWithCallback(
-              measurement -> {
-                measurement.record(this.maxSessionsInUse, attributes);
-              });
-
-      AttributesBuilder attributesBuilder;
-      if (attributes != null) {
-        attributesBuilder = attributes.toBuilder();
-      } else {
-        attributesBuilder = Attributes.builder();
-      }
-      Attributes attributesInUseSessions =
-          attributesBuilder.put(SESSIONS_TYPE, NUM_SESSIONS_IN_USE_NAME).build();
-      Attributes attributesAvailableSessions =
-          attributesBuilder.put(SESSIONS_TYPE, NUM_SESSIONS_AVAILABLE_NAME).build();
-      meter
-          .upDownCounterBuilder(NUM_SESSIONS_IN_POOL_NAME)
-          .setDescription(NUM_SESSIONS_IN_POOL_DESCRIPTION)
-          .setUnit(COUNT)
-          .buildWithCallback(
-              measurement -> {
-                measurement.record(this.numSessionsInUse, attributesInUseSessions);
-                measurement.record(this.sessions.size(), attributesAvailableSessions);
-              });
-
-      meter
-          .counterBuilder(GET_SESSION_TIMEOUTS_NAME)
-          .setDescription(SESSIONS_TIMEOUTS_DESCRIPTION)
-          .setUnit(COUNT)
-          .buildWithCallback(
-              measurement -> {
-                measurement.record(this.getNumWaiterTimeouts(), attributes);
-              });
-
-      meter
-          .counterBuilder(NUM_ACQUIRED_SESSIONS_NAME)
-          .setDescription(NUM_ACQUIRED_SESSIONS_DESCRIPTION)
-          .setUnit(COUNT)
-          .buildWithCallback(
-              measurement -> {
-                measurement.record(this.numSessionsAcquired, attributes);
-              });
-
-      meter
-          .counterBuilder(NUM_RELEASED_SESSIONS_NAME)
-          .setDescription(NUM_RELEASED_SESSIONS_DESCRIPTION)
-          .setUnit(COUNT)
-          .buildWithCallback(
-              measurement -> {
-                measurement.record(this.numSessionsReleased, attributes);
-              });
+    if (openTelemetry == null) {
+      return;
     }
+
+    Meter meter = openTelemetry.getMeter(MetricRegistryConstants.Scope);
+    meter
+        .gaugeBuilder(MAX_ALLOWED_SESSIONS_NAME)
+        .setDescription(MAX_ALLOWED_SESSIONS_DESCRIPTION)
+        .setUnit(COUNT)
+        .buildWithCallback(
+            measurement -> {
+              measurement.record(options.getMaxSessions(), attributes);
+            });
+
+    meter
+        .gaugeBuilder(MAX_IN_USE_SESSIONS_NAME)
+        .setDescription(MAX_IN_USE_SESSIONS_DESCRIPTION)
+        .setUnit(COUNT)
+        .buildWithCallback(
+            measurement -> {
+              measurement.record(this.maxSessionsInUse, attributes);
+            });
+
+    AttributesBuilder attributesBuilder;
+    if (attributes != null) {
+      attributesBuilder = attributes.toBuilder();
+    } else {
+      attributesBuilder = Attributes.builder();
+    }
+    Attributes attributesInUseSessions =
+        attributesBuilder.put(SESSIONS_TYPE, NUM_SESSIONS_IN_USE_NAME).build();
+    Attributes attributesAvailableSessions =
+        attributesBuilder.put(SESSIONS_TYPE, NUM_SESSIONS_AVAILABLE_NAME).build();
+    meter
+        .upDownCounterBuilder(NUM_SESSIONS_IN_POOL_NAME)
+        .setDescription(NUM_SESSIONS_IN_POOL_DESCRIPTION)
+        .setUnit(COUNT)
+        .buildWithCallback(
+            measurement -> {
+              measurement.record(this.numSessionsInUse, attributesInUseSessions);
+              measurement.record(this.sessions.size(), attributesAvailableSessions);
+            });
+
+    meter
+        .counterBuilder(GET_SESSION_TIMEOUTS_NAME)
+        .setDescription(SESSIONS_TIMEOUTS_DESCRIPTION)
+        .setUnit(COUNT)
+        .buildWithCallback(
+            measurement -> {
+              measurement.record(this.getNumWaiterTimeouts(), attributes);
+            });
+
+    meter
+        .counterBuilder(NUM_ACQUIRED_SESSIONS_NAME)
+        .setDescription(NUM_ACQUIRED_SESSIONS_DESCRIPTION)
+        .setUnit(COUNT)
+        .buildWithCallback(
+            measurement -> {
+              measurement.record(this.numSessionsAcquired, attributes);
+            });
+
+    meter
+        .counterBuilder(NUM_RELEASED_SESSIONS_NAME)
+        .setDescription(NUM_RELEASED_SESSIONS_DESCRIPTION)
+        .setUnit(COUNT)
+        .buildWithCallback(
+            measurement -> {
+              measurement.record(this.numSessionsReleased, attributes);
+            });
   }
 }
