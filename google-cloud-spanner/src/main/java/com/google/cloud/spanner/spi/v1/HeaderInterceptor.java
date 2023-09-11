@@ -69,14 +69,27 @@ class HeaderInterceptor implements ClientInterceptor {
 
   HeaderInterceptor() {}
 
+  private class SpannerProperties {
+    String projectId;
+    String instanceId;
+    String databaseId;
+
+    SpannerProperties(String projectId, String instanceId, String databaseId) {
+      this.databaseId = databaseId;
+      this.instanceId = instanceId;
+      this.projectId = projectId;
+    }
+  }
+
   @Override
   public <ReqT, RespT> ClientCall<ReqT, RespT> interceptCall(
       MethodDescriptor<ReqT, RespT> method, CallOptions callOptions, Channel next) {
     return new SimpleForwardingClientCall<ReqT, RespT>(next.newCall(method, callOptions)) {
       @Override
       public void start(Listener<RespT> responseListener, Metadata headers) {
-        TagContext tagContext = getTagContext(headers, method.getFullMethodName());
-        Attributes attributes = getMetricAttributes(headers, method.getFullMethodName());
+        SpannerProperties spannerProperties = setProjectPropertes(headers);
+        TagContext tagContext = getTagContext(method.getFullMethodName(), spannerProperties);
+        Attributes attributes = getMetricAttributes(method.getFullMethodName(), spannerProperties);
         super.start(
             new SimpleForwardingClientCallListener<RespT>(responseListener) {
               @Override
@@ -114,62 +127,43 @@ class HeaderInterceptor implements ClientInterceptor {
     }
   }
 
-  private TagContext getTagContext(
-      String method, String projectId, String instanceId, String databaseId) {
+  private SpannerProperties setProjectPropertes(Metadata headers) {
+    String projectId = "undefined-project";
+    String instanceId = "undefined-database";
+    String databaseId = "undefined-database";
+    if (headers.get(GOOGLE_CLOUD_RESOURCE_PREFIX_KEY) != null) {
+      String googleResourcePrefix = headers.get(GOOGLE_CLOUD_RESOURCE_PREFIX_KEY);
+      Matcher matcher = GOOGLE_CLOUD_RESOURCE_PREFIX_PATTERN.matcher(googleResourcePrefix);
+      if (matcher.find()) {
+        projectId = matcher.group("project");
+        if (matcher.group("instance") != null) {
+          instanceId = matcher.group("instance");
+        }
+        if (matcher.group("database") != null) {
+          databaseId = matcher.group("database");
+        }
+      } else {
+        LOGGER.log(LEVEL, "Error parsing google cloud resource header: " + googleResourcePrefix);
+      }
+    }
+    return new SpannerProperties(projectId, instanceId, databaseId);
+  }
+
+  private TagContext getTagContext(String method, SpannerProperties spannerProperties) {
     return TAGGER
         .currentBuilder()
-        .putLocal(PROJECT_ID, TagValue.create(projectId))
-        .putLocal(INSTANCE_ID, TagValue.create(instanceId))
-        .putLocal(DATABASE_ID, TagValue.create(databaseId))
+        .putLocal(PROJECT_ID, TagValue.create(spannerProperties.projectId))
+        .putLocal(INSTANCE_ID, TagValue.create(spannerProperties.instanceId))
+        .putLocal(DATABASE_ID, TagValue.create(spannerProperties.databaseId))
         .putLocal(METHOD, TagValue.create(method))
         .build();
   }
 
-  private TagContext getTagContext(Metadata headers, String method) {
-    String projectId = "undefined-project";
-    String instanceId = "undefined-database";
-    String databaseId = "undefined-database";
-    if (headers.get(GOOGLE_CLOUD_RESOURCE_PREFIX_KEY) != null) {
-      String googleResourcePrefix = headers.get(GOOGLE_CLOUD_RESOURCE_PREFIX_KEY);
-      Matcher matcher = GOOGLE_CLOUD_RESOURCE_PREFIX_PATTERN.matcher(googleResourcePrefix);
-      if (matcher.find()) {
-        projectId = matcher.group("project");
-        if (matcher.group("instance") != null) {
-          instanceId = matcher.group("instance");
-        }
-        if (matcher.group("database") != null) {
-          databaseId = matcher.group("database");
-        }
-      } else {
-        LOGGER.log(LEVEL, "Error parsing google cloud resource header: " + googleResourcePrefix);
-      }
-    }
-    return getTagContext(method, projectId, instanceId, databaseId);
-  }
-
-  private Attributes getMetricAttributes(Metadata headers, String method) {
-    String projectId = "undefined-project";
-    String instanceId = "undefined-database";
-    String databaseId = "undefined-database";
-    if (headers.get(GOOGLE_CLOUD_RESOURCE_PREFIX_KEY) != null) {
-      String googleResourcePrefix = headers.get(GOOGLE_CLOUD_RESOURCE_PREFIX_KEY);
-      Matcher matcher = GOOGLE_CLOUD_RESOURCE_PREFIX_PATTERN.matcher(googleResourcePrefix);
-      if (matcher.find()) {
-        projectId = matcher.group("project");
-        if (matcher.group("instance") != null) {
-          instanceId = matcher.group("instance");
-        }
-        if (matcher.group("database") != null) {
-          databaseId = matcher.group("database");
-        }
-      } else {
-        LOGGER.log(LEVEL, "Error parsing google cloud resource header: " + googleResourcePrefix);
-      }
-    }
+  private Attributes getMetricAttributes(String method, SpannerProperties spannerProperties) {
     AttributesBuilder attributesBuilder = Attributes.builder();
-    attributesBuilder.put("database", databaseId);
-    attributesBuilder.put("instance_id", instanceId);
-    attributesBuilder.put("project_id", projectId);
+    attributesBuilder.put("database", spannerProperties.databaseId);
+    attributesBuilder.put("instance_id", spannerProperties.instanceId);
+    attributesBuilder.put("project_id", spannerProperties.projectId);
     attributesBuilder.put("method", method);
 
     return attributesBuilder.build();

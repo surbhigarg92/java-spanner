@@ -66,24 +66,18 @@ public class SpannerRpcMetricsTest {
   private static InetSocketAddress address;
   private static Spanner spanner;
   private static DatabaseClient databaseClient;
-
   private static final Map<SpannerRpc.Option, Object> optionsMap = new HashMap<>();
-
   private static MockSpannerServiceImpl mockSpannerNoHeader;
   private static Server serverNoHeader;
   private static InetSocketAddress addressNoHeader;
   private static Spanner spannerNoHeader;
   private static DatabaseClient databaseClientNoHeader;
-
   private static String instanceId = "fake-instance";
   private static String databaseId = "fake-database";
   private static String projectId = "fake-project";
-
   private static AtomicInteger fakeServerTiming = new AtomicInteger(new Random().nextInt(1000) + 1);
-
   private static final Statement SELECT1AND2 =
       Statement.of("SELECT 1 AS COL1 UNION ALL SELECT 2 AS COL1");
-
   private static final ResultSetMetadata SELECT1AND2_METADATA =
       ResultSetMetadata.newBuilder()
           .setRowType(

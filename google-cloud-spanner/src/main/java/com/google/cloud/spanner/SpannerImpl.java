@@ -128,6 +128,7 @@ class SpannerImpl extends BaseService<SpannerOptions> implements Spanner {
     this.dbAdminClient = new DatabaseAdminClientImpl(options.getProjectId(), gapicRpc);
     this.instanceClient =
         new InstanceAdminClientImpl(options.getProjectId(), gapicRpc, dbAdminClient);
+    SpannerRpcMetrics.initializeRPCMetrics(SpannerOptions.getOpenTelemetry());
   }
 
   SpannerImpl(SpannerOptions options) {
