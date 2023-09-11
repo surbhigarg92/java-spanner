@@ -58,7 +58,6 @@ import org.threeten.bp.Instant;
 class SpannerImpl extends BaseService<SpannerOptions> implements Spanner {
   private static final Logger logger = Logger.getLogger(SpannerImpl.class.getName());
   static final Tracer tracer = Tracing.getTracer();
-  static final io.opentelemetry.api.trace.Tracer openTelemetryTracer = SpannerOptions.getTracer();
 
   static final String CREATE_SESSION = "CloudSpannerOperation.CreateSession";
   static final String BATCH_CREATE_SESSIONS = "CloudSpannerOperation.BatchCreateSessions";

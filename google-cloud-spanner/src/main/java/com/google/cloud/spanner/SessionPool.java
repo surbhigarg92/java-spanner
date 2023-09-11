@@ -131,8 +131,6 @@ class SessionPool {
 
   private static final Logger logger = Logger.getLogger(SessionPool.class.getName());
   private static final Tracer tracer = Tracing.getTracer();
-  private static final io.opentelemetry.api.trace.Tracer openTelemetryTracer =
-      SpannerOptions.getTracer();
   static final String WAIT_FOR_SESSION = "SessionPool.WaitForSession";
   static final ImmutableSet<ErrorCode> SHOULD_STOP_PREPARE_SESSIONS_ERROR_CODES =
       ImmutableSet.of(
@@ -1682,7 +1680,7 @@ class SessionPool {
       while (true) {
         Span span = tracer.spanBuilder(WAIT_FOR_SESSION).startSpan();
         io.opentelemetry.api.trace.Span openTelemetrySpan =
-            OpenTelemetryTraceUtil.spanBuilder(openTelemetryTracer, WAIT_FOR_SESSION);
+            OpenTelemetryTraceUtil.spanBuilder(SpannerOptions.getTracer(), WAIT_FOR_SESSION);
         try (Scope waitScope = tracer.withSpan(span);
             io.opentelemetry.context.Scope ss = openTelemetrySpan.makeCurrent()) {
           PooledSession s = pollUninterruptiblyWithTimeout(currentTimeout);

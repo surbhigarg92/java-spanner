@@ -73,8 +73,6 @@ import javax.annotation.concurrent.GuardedBy;
 /** Default implementation of {@link TransactionRunner}. */
 class TransactionRunnerImpl implements SessionTransaction, TransactionRunner {
   private static final Tracer tracer = Tracing.getTracer();
-  private static final io.opentelemetry.api.trace.Tracer openTelemetryTracer =
-      SpannerOptions.getTracer();
   private static final Logger txnLogger = Logger.getLogger(TransactionRunner.class.getName());
   /**
    * (Part of) the error message that is returned by Cloud Spanner if a transaction is cancelled
@@ -407,7 +405,7 @@ class TransactionRunnerImpl implements SessionTransaction, TransactionRunner {
               tracer.spanBuilderWithExplicitParent(SpannerImpl.COMMIT, span).startSpan();
           final io.opentelemetry.api.trace.Span openTelemetryOpSpan =
               OpenTelemetryTraceUtil.spanBuilderWithExplicitParent(
-                  openTelemetryTracer, SpannerImpl.COMMIT, openTelemetrySpan);
+                  SpannerOptions.getTracer(), SpannerImpl.COMMIT, openTelemetrySpan);
           final ApiFuture<com.google.spanner.v1.CommitResponse> commitFuture =
               rpc.commitAsync(commitRequest, session.getOptions());
           commitFuture.addListener(

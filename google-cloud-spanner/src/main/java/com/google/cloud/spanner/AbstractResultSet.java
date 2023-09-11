@@ -83,8 +83,6 @@ import org.threeten.bp.Duration;
 
 /** Implementation of {@link ResultSet}. */
 abstract class AbstractResultSet<R> extends AbstractStructReader implements ResultSet {
-  private static final io.opentelemetry.api.trace.Tracer openTelemetryTracer =
-      SpannerOptions.getTracer();
   private static final Tracer tracer = Tracing.getTracer();
   private static final com.google.protobuf.Value NULL_VALUE =
       com.google.protobuf.Value.newBuilder().setNullValue(NullValue.NULL_VALUE).build();
@@ -1119,7 +1117,7 @@ abstract class AbstractResultSet<R> extends AbstractStructReader implements Resu
       this.maxBufferSize = maxBufferSize;
       this.openTelemetrySpan =
           OpenTelemetryTraceUtil.spanBuilderWithExplicitParent(
-              openTelemetryTracer, streamName, openTelemetryParent);
+              SpannerOptions.getTracer(), streamName, openTelemetryParent);
       this.span = tracer.spanBuilderWithExplicitParent(streamName, parent).startSpan();
       this.streamingRetrySettings = Preconditions.checkNotNull(streamingRetrySettings);
       this.retryableCodes = Preconditions.checkNotNull(retryableCodes);

@@ -113,6 +113,7 @@ class SessionClient implements AutoCloseable {
     private final long channelHint;
     private final int sessionCount;
     private final SessionConsumer consumer;
+    private final io.opentelemetry.api.trace.Tracer openTelemetryTracer;
 
     private BatchCreateSessionsRunnable(
         int sessionCount, long channelHint, SessionConsumer consumer) {
@@ -121,6 +122,7 @@ class SessionClient implements AutoCloseable {
       this.channelHint = channelHint;
       this.sessionCount = sessionCount;
       this.consumer = consumer;
+      this.openTelemetryTracer = SpannerOptions.getTracer();
     }
 
     @Override
@@ -130,7 +132,7 @@ class SessionClient implements AutoCloseable {
       Span span = SpannerImpl.tracer.spanBuilder(SpannerImpl.BATCH_CREATE_SESSIONS).startSpan();
       io.opentelemetry.api.trace.Span openTelemetrySpan =
           OpenTelemetryTraceUtil.spanBuilder(
-              SpannerImpl.openTelemetryTracer, SpannerImpl.BATCH_CREATE_SESSIONS);
+              this.openTelemetryTracer, SpannerImpl.BATCH_CREATE_SESSIONS);
       try (Scope s = SpannerImpl.tracer.withSpan(span);
           io.opentelemetry.context.Scope ss = openTelemetrySpan.makeCurrent()) {
         SpannerImpl.tracer
@@ -183,6 +185,7 @@ class SessionClient implements AutoCloseable {
   private final ExecutorFactory<ScheduledExecutorService> executorFactory;
   private final ScheduledExecutorService executor;
   private final DatabaseId db;
+  private final io.opentelemetry.api.trace.Tracer openTelemetryTracer;
 
   @GuardedBy("this")
   private volatile long sessionChannelCounter;
@@ -195,6 +198,7 @@ class SessionClient implements AutoCloseable {
     this.db = db;
     this.executorFactory = executorFactory;
     this.executor = executorFactory.get();
+    this.openTelemetryTracer = SpannerOptions.getTracer();
   }
 
   @Override
@@ -220,8 +224,7 @@ class SessionClient implements AutoCloseable {
     }
     Span span = SpannerImpl.tracer.spanBuilder(SpannerImpl.CREATE_SESSION).startSpan();
     io.opentelemetry.api.trace.Span openTelemetrySpan =
-        OpenTelemetryTraceUtil.spanBuilder(
-            SpannerImpl.openTelemetryTracer, SpannerImpl.CREATE_SESSION);
+        OpenTelemetryTraceUtil.spanBuilder(this.openTelemetryTracer, SpannerImpl.CREATE_SESSION);
     try (Scope s = SpannerImpl.tracer.withSpan(span);
         io.opentelemetry.context.Scope ss = openTelemetrySpan.makeCurrent()) {
       com.google.spanner.v1.Session session =
@@ -312,7 +315,7 @@ class SessionClient implements AutoCloseable {
         io.opentelemetry.api.trace.Span.fromContext(io.opentelemetry.context.Context.current());
     io.opentelemetry.api.trace.Span openTelemetrySpan =
         OpenTelemetryTraceUtil.spanBuilderWithExplicitParent(
-            SpannerImpl.openTelemetryTracer,
+            this.openTelemetryTracer,
             SpannerImpl.BATCH_CREATE_SESSIONS_REQUEST,
             openTelemetryParentSpan);
     OpenTelemetryTraceUtil.addEvent(

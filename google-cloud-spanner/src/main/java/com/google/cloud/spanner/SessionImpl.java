@@ -57,8 +57,6 @@ import javax.annotation.Nullable;
  */
 class SessionImpl implements Session {
   private static final Tracer tracer = Tracing.getTracer();
-  private static final io.opentelemetry.api.trace.Tracer openTelemetryTracer =
-      SpannerOptions.getTracer();
 
   /** Keep track of running transactions on this session per thread. */
   static final ThreadLocal<Boolean> hasPendingTransaction = ThreadLocal.withInitial(() -> false);
@@ -98,6 +96,7 @@ class SessionImpl implements Session {
   private SessionTransaction activeTransaction;
   ByteString readyTransactionId;
   private final Map<SpannerRpc.Option, ?> options;
+  private final io.opentelemetry.api.trace.Tracer openTelemetryTracer;
   private Span currentSpan;
   private io.opentelemetry.api.trace.Span openTelemetryCurrentSpan;
 
@@ -106,6 +105,7 @@ class SessionImpl implements Session {
     this.options = options;
     this.name = checkNotNull(name);
     this.databaseId = SessionId.of(name).getDatabaseId();
+    this.openTelemetryTracer = SpannerOptions.getTracer();
   }
 
   @Override
@@ -197,7 +197,7 @@ class SessionImpl implements Session {
     }
     Span span = tracer.spanBuilder(SpannerImpl.COMMIT).startSpan();
     io.opentelemetry.api.trace.Span openTelemetrySpan =
-        OpenTelemetryTraceUtil.spanBuilder(openTelemetryTracer, SpannerImpl.COMMIT);
+        OpenTelemetryTraceUtil.spanBuilder(this.openTelemetryTracer, SpannerImpl.COMMIT);
     try (Scope s = tracer.withSpan(span);
         io.opentelemetry.context.Scope ss = openTelemetrySpan.makeCurrent()) {
       com.google.spanner.v1.CommitResponse response =
@@ -308,7 +308,7 @@ class SessionImpl implements Session {
   public void close() {
     Span span = tracer.spanBuilder(SpannerImpl.DELETE_SESSION).startSpan();
     io.opentelemetry.api.trace.Span openTelemetrySpan =
-        OpenTelemetryTraceUtil.spanBuilder(openTelemetryTracer, SpannerImpl.DELETE_SESSION);
+        OpenTelemetryTraceUtil.spanBuilder(this.openTelemetryTracer, SpannerImpl.DELETE_SESSION);
 
     try (Scope s = tracer.withSpan(span);
         io.opentelemetry.context.Scope ss = openTelemetrySpan.makeCurrent()) {
@@ -341,7 +341,7 @@ class SessionImpl implements Session {
     final SettableApiFuture<ByteString> res = SettableApiFuture.create();
     final Span span = tracer.spanBuilder(SpannerImpl.BEGIN_TRANSACTION).startSpan();
     final io.opentelemetry.api.trace.Span openTelemetrySpan =
-        OpenTelemetryTraceUtil.spanBuilder(openTelemetryTracer, SpannerImpl.BEGIN_TRANSACTION);
+        OpenTelemetryTraceUtil.spanBuilder(this.openTelemetryTracer, SpannerImpl.BEGIN_TRANSACTION);
     final BeginTransactionRequest request =
         BeginTransactionRequest.newBuilder()
             .setSession(name)
