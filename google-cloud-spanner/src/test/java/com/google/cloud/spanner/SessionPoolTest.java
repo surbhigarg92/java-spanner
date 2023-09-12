@@ -177,6 +177,7 @@ public class SessionPoolTest extends BaseSessionPoolTest {
         new TestExecutorFactory(),
         client.getSessionClient(db),
         clock,
+        Position.RANDOM,
         metricRegistry,
         labelValues,
         openTelemetry,

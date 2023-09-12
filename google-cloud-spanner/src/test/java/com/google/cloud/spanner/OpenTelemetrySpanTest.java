@@ -1,5 +1,5 @@
 /*
- * Copyright 2020 Google LLC
+ * Copyright 2023 Google LLC
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,7 +16,6 @@
 
 package com.google.cloud.spanner;
 
-import static com.google.common.truth.Truth.assertThat;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertThrows;
 import static org.junit.Assert.assertTrue;
@@ -106,8 +105,6 @@ public class OpenTelemetrySpanTest {
     String uniqueName = InProcessServerBuilder.generateName();
     server =
         InProcessServerBuilder.forName(uniqueName)
-            // We need to use a real executor for timeouts to occur.
-            .scheduledExecutorService(new ScheduledThreadPoolExecutor(1))
             .addService(mockSpanner)
             .build()
             .start();
@@ -181,7 +178,7 @@ public class OpenTelemetrySpanTest {
                           || name.equals("CloudSpanner.ReadOnlyTransaction")
                           || name.equals("SessionPool.WaitForSession"));
       assertTrue(hasSpanData);
-      assertThat(spans.size()).isEqualTo(5);
+      assertEquals(5, spans.size());
     }
   }
 
@@ -209,7 +206,7 @@ public class OpenTelemetrySpanTest {
                         || name.equals("CloudSpanner.ReadOnlyTransaction")
                         || name.equals("SessionPool.WaitForSession"));
     assertTrue(hasSpanData);
-    assertThat(spans.size()).isEqualTo(5);
+    assertEquals(5, spans.size());
   }
 
   @Test
@@ -231,7 +228,7 @@ public class OpenTelemetrySpanTest {
                         || name.equals("CloudSpanner.ReadWriteTransaction")
                         || name.equals("SessionPool.WaitForSession"));
     assertTrue(hasSpanData);
-    assertThat(spans.size()).isEqualTo(5);
+    assertEquals(5, spans.size());
   }
 
   @Test
@@ -257,6 +254,6 @@ public class OpenTelemetrySpanTest {
                         || name.equals("CloudSpanner.ReadWriteTransaction")
                         || name.equals("SessionPool.WaitForSession"));
     assertTrue(hasSpanData);
-    assertThat(spans.size()).isEqualTo(4);
+    assertEquals(4, spans.size());
   }
 }
