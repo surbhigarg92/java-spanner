@@ -35,6 +35,7 @@ import com.google.cloud.Timestamp;
 import com.google.cloud.grpc.GrpcTransportOptions;
 import com.google.cloud.grpc.GrpcTransportOptions.ExecutorFactory;
 import com.google.cloud.spanner.spi.v1.SpannerRpc;
+import com.google.cloud.spanner.tracing.DualSpan;
 import com.google.cloud.spanner.v1.stub.SpannerStubSettings;
 import com.google.protobuf.ByteString;
 import com.google.protobuf.Empty;
@@ -128,9 +129,9 @@ public class SessionImplTest {
         .thenReturn(
             SpannerStubSettings.newBuilder().executeStreamingSqlSettings().getRetryableCodes());
     session = spanner.getSessionClient(db).createSession();
-    ((SessionImpl) session).setCurrentSpan(mock(Span.class));
     ((SessionImpl) session)
-        .setCurrentOpenTelemetrySpan(mock(io.opentelemetry.api.trace.Span.class));
+        .setCurrentSpan(
+            new DualSpan(mock(Span.class), mock(io.opentelemetry.api.trace.Span.class)));
     // We expect the same options, "options", on all calls on "session".
     options = optionsCaptor.getValue();
   }

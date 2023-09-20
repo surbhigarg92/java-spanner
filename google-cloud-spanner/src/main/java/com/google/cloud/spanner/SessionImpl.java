@@ -30,6 +30,9 @@ import com.google.cloud.spanner.Options.UpdateOption;
 import com.google.cloud.spanner.SessionClient.SessionId;
 import com.google.cloud.spanner.TransactionRunnerImpl.TransactionContextImpl;
 import com.google.cloud.spanner.spi.v1.SpannerRpc;
+import com.google.cloud.spanner.tracing.IScope;
+import com.google.cloud.spanner.tracing.ISpan;
+import com.google.cloud.spanner.tracing.TraceWrapper;
 import com.google.common.base.Ticker;
 import com.google.common.collect.Lists;
 import com.google.common.util.concurrent.MoreExecutors;
@@ -40,9 +43,7 @@ import com.google.spanner.v1.CommitRequest;
 import com.google.spanner.v1.RequestOptions;
 import com.google.spanner.v1.Transaction;
 import com.google.spanner.v1.TransactionOptions;
-import io.opencensus.common.Scope;
 import io.opencensus.trace.Span;
-import io.opencensus.trace.Tracer;
 import io.opencensus.trace.Tracing;
 import java.util.ArrayList;
 import java.util.Collection;
@@ -56,7 +57,7 @@ import javax.annotation.Nullable;
  * users need not be aware of the actual session management, pooling and handling.
  */
 class SessionImpl implements Session {
-  private static final Tracer tracer = Tracing.getTracer();
+  private static final TraceWrapper tracer = new TraceWrapper(Tracing.getTracer());
 
   /** Keep track of running transactions on this session per thread. */
   static final ThreadLocal<Boolean> hasPendingTransaction = ThreadLocal.withInitial(() -> false);
@@ -86,8 +87,8 @@ class SessionImpl implements Session {
     void invalidate();
     /** Registers the current span on the transaction. */
     void setSpan(Span span);
-    /** Registers the current opentelemetry span on the transaction. */
-    void setOpenTelemetrySpan(io.opentelemetry.api.trace.Span span);
+    /** Registers the current span on the transaction. */
+    void setSpan(ISpan span);
   }
 
   private final SpannerImpl spanner;
@@ -96,16 +97,13 @@ class SessionImpl implements Session {
   private SessionTransaction activeTransaction;
   ByteString readyTransactionId;
   private final Map<SpannerRpc.Option, ?> options;
-  private final io.opentelemetry.api.trace.Tracer openTelemetryTracer;
-  private Span currentSpan;
-  private io.opentelemetry.api.trace.Span openTelemetryCurrentSpan;
+  private ISpan currentSpan;
 
   SessionImpl(SpannerImpl spanner, String name, Map<SpannerRpc.Option, ?> options) {
     this.spanner = spanner;
     this.options = options;
     this.name = checkNotNull(name);
     this.databaseId = SessionId.of(name).getDatabaseId();
-    this.openTelemetryTracer = SpannerOptions.getTracer();
   }
 
   @Override
@@ -117,20 +115,12 @@ class SessionImpl implements Session {
     return options;
   }
 
-  void setCurrentSpan(Span span) {
+  void setCurrentSpan(ISpan span) {
     currentSpan = span;
   }
 
-  Span getCurrentSpan() {
+  ISpan getCurrentSpan() {
     return currentSpan;
-  }
-
-  void setCurrentOpenTelemetrySpan(io.opentelemetry.api.trace.Span span) {
-    openTelemetryCurrentSpan = span;
-  }
-
-  io.opentelemetry.api.trace.Span getCurrentOpenTelemetrySpan() {
-    return openTelemetryCurrentSpan;
   }
 
   @Override
@@ -195,21 +185,16 @@ class SessionImpl implements Session {
       }
       requestBuilder.setRequestOptions(requestOptionsBuilder.build());
     }
-    Span span = tracer.spanBuilder(SpannerImpl.COMMIT).startSpan();
-    io.opentelemetry.api.trace.Span openTelemetrySpan =
-        OpenTelemetryTraceUtil.spanBuilder(this.openTelemetryTracer, SpannerImpl.COMMIT);
-    try (Scope s = tracer.withSpan(span);
-        io.opentelemetry.context.Scope ss = openTelemetrySpan.makeCurrent()) {
+    ISpan span = tracer.spanBuilder(SpannerImpl.COMMIT);
+    try (IScope s = tracer.withSpan(span)) {
       com.google.spanner.v1.CommitResponse response =
           spanner.getRpc().commit(requestBuilder.build(), this.options);
       return new CommitResponse(response);
     } catch (RuntimeException e) {
-      TraceUtil.setWithFailure(span, e);
-      OpenTelemetryTraceUtil.setWithFailure(openTelemetrySpan, e);
+      span.setStatus(e);
       throw e;
     } finally {
-      span.end(TraceUtil.END_SPAN_OPTIONS);
-      OpenTelemetryTraceUtil.endSpan(openTelemetrySpan);
+      span.end();
     }
   }
 
@@ -228,7 +213,6 @@ class SessionImpl implements Session {
             .setDefaultQueryOptions(spanner.getDefaultQueryOptions(databaseId))
             .setDefaultPrefetchChunks(spanner.getDefaultPrefetchChunks())
             .setSpan(currentSpan)
-            .setOpenTelemetrySpan(openTelemetryCurrentSpan)
             .setExecutorProvider(spanner.getAsyncExecutorProvider())
             .build());
   }
@@ -248,7 +232,6 @@ class SessionImpl implements Session {
             .setDefaultQueryOptions(spanner.getDefaultQueryOptions(databaseId))
             .setDefaultPrefetchChunks(spanner.getDefaultPrefetchChunks())
             .setSpan(currentSpan)
-            .setOpenTelemetrySpan(openTelemetryCurrentSpan)
             .setExecutorProvider(spanner.getAsyncExecutorProvider())
             .buildSingleUseReadOnlyTransaction());
   }
@@ -268,7 +251,6 @@ class SessionImpl implements Session {
             .setDefaultQueryOptions(spanner.getDefaultQueryOptions(databaseId))
             .setDefaultPrefetchChunks(spanner.getDefaultPrefetchChunks())
             .setSpan(currentSpan)
-            .setOpenTelemetrySpan(openTelemetryCurrentSpan)
             .setExecutorProvider(spanner.getAsyncExecutorProvider())
             .build());
   }
@@ -285,12 +267,12 @@ class SessionImpl implements Session {
 
   @Override
   public TransactionManager transactionManager(TransactionOption... options) {
-    return new TransactionManagerImpl(this, currentSpan, openTelemetryCurrentSpan, options);
+    return new TransactionManagerImpl(this, currentSpan, options);
   }
 
   @Override
   public AsyncTransactionManagerImpl transactionManagerAsync(TransactionOption... options) {
-    return new AsyncTransactionManagerImpl(this, currentSpan, openTelemetryCurrentSpan, options);
+    return new AsyncTransactionManagerImpl(this, currentSpan, options);
   }
 
   @Override
@@ -306,20 +288,14 @@ class SessionImpl implements Session {
 
   @Override
   public void close() {
-    Span span = tracer.spanBuilder(SpannerImpl.DELETE_SESSION).startSpan();
-    io.opentelemetry.api.trace.Span openTelemetrySpan =
-        OpenTelemetryTraceUtil.spanBuilder(this.openTelemetryTracer, SpannerImpl.DELETE_SESSION);
-
-    try (Scope s = tracer.withSpan(span);
-        io.opentelemetry.context.Scope ss = openTelemetrySpan.makeCurrent()) {
+    ISpan span = tracer.spanBuilder(SpannerImpl.DELETE_SESSION);
+    try (IScope s = tracer.withSpan(span)) {
       spanner.getRpc().deleteSession(name, options);
     } catch (RuntimeException e) {
-      TraceUtil.setWithFailure(span, e);
-      OpenTelemetryTraceUtil.setWithFailure(openTelemetrySpan, e);
+      span.setStatus(e);
       throw e;
     } finally {
-      span.end(TraceUtil.END_SPAN_OPTIONS);
-      OpenTelemetryTraceUtil.endSpan(openTelemetrySpan);
+      span.end();
     }
   }
 
@@ -339,9 +315,7 @@ class SessionImpl implements Session {
 
   ApiFuture<ByteString> beginTransactionAsync(Options transactionOptions, boolean routeToLeader) {
     final SettableApiFuture<ByteString> res = SettableApiFuture.create();
-    final Span span = tracer.spanBuilder(SpannerImpl.BEGIN_TRANSACTION).startSpan();
-    final io.opentelemetry.api.trace.Span openTelemetrySpan =
-        OpenTelemetryTraceUtil.spanBuilder(this.openTelemetryTracer, SpannerImpl.BEGIN_TRANSACTION);
+    final ISpan span = tracer.spanBuilder(SpannerImpl.BEGIN_TRANSACTION);
     final BeginTransactionRequest request =
         BeginTransactionRequest.newBuilder()
             .setSession(name)
@@ -351,30 +325,26 @@ class SessionImpl implements Session {
         spanner.getRpc().beginTransactionAsync(request, options, routeToLeader);
     requestFuture.addListener(
         () -> {
-          try (Scope s = tracer.withSpan(span);
-              io.opentelemetry.context.Scope ss = openTelemetrySpan.makeCurrent()) {
+          try (IScope s = tracer.withSpan(span)) {
             Transaction txn = requestFuture.get();
             if (txn.getId().isEmpty()) {
               throw newSpannerException(
                   ErrorCode.INTERNAL, "Missing id in transaction\n" + getName());
             }
-            span.end(TraceUtil.END_SPAN_OPTIONS);
-            OpenTelemetryTraceUtil.endSpan(openTelemetrySpan);
             res.set(txn.getId());
           } catch (ExecutionException e) {
-            TraceUtil.endSpanWithFailure(span, e);
-            OpenTelemetryTraceUtil.endSpanWithFailure(openTelemetrySpan, e);
+            span.setStatus(e);
             res.setException(
                 SpannerExceptionFactory.newSpannerException(
                     e.getCause() == null ? e : e.getCause()));
           } catch (InterruptedException e) {
-            TraceUtil.endSpanWithFailure(span, e);
-            OpenTelemetryTraceUtil.endSpanWithFailure(openTelemetrySpan, e);
+            span.setStatus(e);
             res.setException(SpannerExceptionFactory.propagateInterrupt(e));
           } catch (Exception e) {
-            TraceUtil.endSpanWithFailure(span, e);
-            OpenTelemetryTraceUtil.endSpanWithFailure(openTelemetrySpan, e);
+            span.setStatus(e);
             res.setException(e);
+          } finally {
+            span.end();
           }
         },
         MoreExecutors.directExecutor());
@@ -392,7 +362,6 @@ class SessionImpl implements Session {
         .setDefaultQueryOptions(spanner.getDefaultQueryOptions(databaseId))
         .setDefaultPrefetchChunks(spanner.getDefaultPrefetchChunks())
         .setSpan(currentSpan)
-        .setOpenTelemetrySpan(openTelemetryCurrentSpan)
         .setExecutorProvider(spanner.getAsyncExecutorProvider())
         .build();
   }
@@ -407,7 +376,6 @@ class SessionImpl implements Session {
     readyTransactionId = null;
     if (activeTransaction != null) {
       activeTransaction.setSpan(currentSpan);
-      activeTransaction.setOpenTelemetrySpan(openTelemetryCurrentSpan);
     }
     return ctx;
   }

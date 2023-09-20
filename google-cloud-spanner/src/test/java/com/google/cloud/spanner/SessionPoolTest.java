@@ -70,6 +70,7 @@ import com.google.cloud.spanner.TransactionRunner.TransactionCallable;
 import com.google.cloud.spanner.TransactionRunnerImpl.TransactionContextImpl;
 import com.google.cloud.spanner.spi.v1.SpannerRpc;
 import com.google.cloud.spanner.spi.v1.SpannerRpc.ResultStreamConsumer;
+import com.google.cloud.spanner.tracing.DualSpan;
 import com.google.cloud.spanner.v1.stub.SpannerStubSettings;
 import com.google.common.util.concurrent.ListenableFuture;
 import com.google.common.util.concurrent.Uninterruptibles;
@@ -1215,8 +1216,8 @@ public class SessionPoolTest extends BaseSessionPoolTest {
           .thenReturn(closedTransactionContext);
       when(closedSession.beginTransactionAsync(any(), eq(true))).thenThrow(sessionNotFound);
       TransactionRunnerImpl closedTransactionRunner = new TransactionRunnerImpl(closedSession);
-      closedTransactionRunner.setSpan(mock(Span.class));
-      closedTransactionRunner.setOpenTelemetrySpan(mock(io.opentelemetry.api.trace.Span.class));
+      closedTransactionRunner.setSpan(
+          new DualSpan(mock(Span.class), mock(io.opentelemetry.api.trace.Span.class)));
       when(closedSession.readWriteTransaction()).thenReturn(closedTransactionRunner);
 
       final SessionImpl openSession = mock(SessionImpl.class);
@@ -1230,8 +1231,8 @@ public class SessionPoolTest extends BaseSessionPoolTest {
       when(openSession.beginTransactionAsync(any(), eq(true)))
           .thenReturn(ApiFutures.immediateFuture(ByteString.copyFromUtf8("open-txn")));
       TransactionRunnerImpl openTransactionRunner = new TransactionRunnerImpl(openSession);
-      openTransactionRunner.setSpan(mock(Span.class));
-      openTransactionRunner.setOpenTelemetrySpan(mock(io.opentelemetry.api.trace.Span.class));
+      openTransactionRunner.setSpan(
+          new DualSpan(mock(Span.class), mock(io.opentelemetry.api.trace.Span.class)));
       when(openSession.readWriteTransaction()).thenReturn(openTransactionRunner);
 
       ResultSet openResultSet = mock(ResultSet.class);

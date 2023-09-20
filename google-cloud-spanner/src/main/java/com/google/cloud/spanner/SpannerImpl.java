@@ -28,6 +28,7 @@ import com.google.cloud.spanner.SpannerOptions.CloseableExecutorProvider;
 import com.google.cloud.spanner.spi.v1.GapicSpannerRpc;
 import com.google.cloud.spanner.spi.v1.SpannerRpc;
 import com.google.cloud.spanner.spi.v1.SpannerRpc.Paginated;
+import com.google.cloud.spanner.tracing.TraceWrapper;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.MoreObjects;
 import com.google.common.base.Preconditions;
@@ -37,7 +38,6 @@ import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ListenableFuture;
 import com.google.spanner.v1.ExecuteSqlRequest.QueryOptions;
 import io.opencensus.metrics.LabelValue;
-import io.opencensus.trace.Tracer;
 import io.opencensus.trace.Tracing;
 import io.opentelemetry.api.common.Attributes;
 import io.opentelemetry.api.common.AttributesBuilder;
@@ -57,7 +57,7 @@ import org.threeten.bp.Instant;
 /** Default implementation of the Cloud Spanner interface. */
 class SpannerImpl extends BaseService<SpannerOptions> implements Spanner {
   private static final Logger logger = Logger.getLogger(SpannerImpl.class.getName());
-  static final Tracer tracer = Tracing.getTracer();
+  static final TraceWrapper tracer = new TraceWrapper(Tracing.getTracer());
 
   static final String CREATE_SESSION = "CloudSpannerOperation.CreateSession";
   static final String BATCH_CREATE_SESSIONS = "CloudSpannerOperation.BatchCreateSessions";

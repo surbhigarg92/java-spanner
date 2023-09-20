@@ -26,6 +26,7 @@ import com.google.api.gax.rpc.ServerStream;
 import com.google.api.gax.rpc.UnavailableException;
 import com.google.cloud.spanner.Options.UpdateOption;
 import com.google.cloud.spanner.spi.v1.SpannerRpc;
+import com.google.cloud.spanner.tracing.ISpan;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Stopwatch;
 import com.google.common.base.Ticker;
@@ -137,13 +138,17 @@ public class PartitionedDmlTransaction implements SessionImpl.SessionTransaction
     isValid = false;
   }
 
-  // No-op method needed to implement SessionTransaction interface.
+  /**
+   * No-op method needed to implement SessionTransaction interface.
+   */
+  @Override
+  public void setSpan(ISpan span) {}
+
+  /**
+   * No-op method needed to implement SessionTransaction interface.
+   */
   @Override
   public void setSpan(Span span) {}
-
-  // No-op method needed to implement SessionTransaction interface.
-  @Override
-  public void setOpenTelemetrySpan(io.opentelemetry.api.trace.Span span) {}
 
   private Duration tryUpdateTimeout(final Duration timeout, final Stopwatch stopwatch) {
     final Duration remainingTimeout =

@@ -25,6 +25,7 @@ import com.google.cloud.spanner.Options.TransactionOption;
 import com.google.cloud.spanner.SessionImpl.SessionTransaction;
 import com.google.cloud.spanner.TransactionContextFutureImpl.CommittableAsyncTransactionManager;
 import com.google.cloud.spanner.TransactionManager.TransactionState;
+import com.google.cloud.spanner.tracing.ISpan;
 import com.google.common.base.MoreObjects;
 import com.google.common.base.Preconditions;
 import com.google.common.util.concurrent.MoreExecutors;
@@ -35,34 +36,29 @@ final class AsyncTransactionManagerImpl
     implements CommittableAsyncTransactionManager, SessionTransaction {
 
   private final SessionImpl session;
-  private Span span;
-  private io.opentelemetry.api.trace.Span openTelemetrySpan;
+  private ISpan span;
   private final Options options;
 
   private TransactionRunnerImpl.TransactionContextImpl txn;
   private TransactionState txnState;
   private final SettableApiFuture<CommitResponse> commitResponse = SettableApiFuture.create();
 
-  AsyncTransactionManagerImpl(
-      SessionImpl session,
-      Span span,
-      io.opentelemetry.api.trace.Span openTelemetrySpan,
-      TransactionOption... options) {
+  AsyncTransactionManagerImpl(SessionImpl session, ISpan span, TransactionOption... options) {
     this.session = session;
     this.span = span;
-    this.openTelemetrySpan = openTelemetrySpan;
     this.options = Options.fromTransactionOptions(options);
   }
 
   @Override
-  public void setSpan(Span span) {
+  public void setSpan(ISpan span) {
     this.span = span;
   }
 
+  /**
+   * No-op method needed to implement SessionTransaction interface.
+   */
   @Override
-  public void setOpenTelemetrySpan(io.opentelemetry.api.trace.Span span) {
-    this.openTelemetrySpan = span;
-  }
+  public void setSpan(Span span) {}
 
   @Override
   public void close() {

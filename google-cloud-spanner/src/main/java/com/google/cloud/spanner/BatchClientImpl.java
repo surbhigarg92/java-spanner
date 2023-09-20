@@ -22,6 +22,7 @@ import com.google.cloud.spanner.AbstractReadContext.MultiUseReadOnlyTransaction;
 import com.google.cloud.spanner.Options.QueryOption;
 import com.google.cloud.spanner.Options.ReadOption;
 import com.google.cloud.spanner.spi.v1.SpannerRpc;
+import com.google.cloud.spanner.tracing.DualSpan;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableList;
 import com.google.protobuf.Struct;
@@ -91,9 +92,11 @@ public class BatchClientImpl implements BatchClient {
       super(builder.setTimestampBound(bound));
       this.sessionName = session.getName();
       this.options = session.getOptions();
-      setSpan(Tracing.getTracer().getCurrentSpan());
-      setOpenTelemetrySpan(
-          io.opentelemetry.api.trace.Span.fromContext(io.opentelemetry.context.Context.current()));
+      setSpan(
+          new DualSpan(
+              Tracing.getTracer().getCurrentSpan(),
+              io.opentelemetry.api.trace.Span.fromContext(
+                  io.opentelemetry.context.Context.current())));
       initTransaction();
     }
 
@@ -102,9 +105,11 @@ public class BatchClientImpl implements BatchClient {
       super(builder.setTransactionId(batchTransactionId.getTransactionId()));
       this.sessionName = session.getName();
       this.options = session.getOptions();
-      setSpan(Tracing.getTracer().getCurrentSpan());
-      setOpenTelemetrySpan(
-          io.opentelemetry.api.trace.Span.fromContext(io.opentelemetry.context.Context.current()));
+      setSpan(
+          new DualSpan(
+              Tracing.getTracer().getCurrentSpan(),
+              io.opentelemetry.api.trace.Span.fromContext(
+                  io.opentelemetry.context.Context.current())));
     }
 
     @Override

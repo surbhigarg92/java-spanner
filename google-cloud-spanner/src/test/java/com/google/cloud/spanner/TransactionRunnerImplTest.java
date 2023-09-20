@@ -20,6 +20,7 @@ import static com.google.common.truth.Truth.assertThat;
 import static org.junit.Assert.assertArrayEquals;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertThrows;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.eq;
 import static org.mockito.Mockito.mock;
@@ -34,6 +35,7 @@ import com.google.cloud.grpc.GrpcTransportOptions.ExecutorFactory;
 import com.google.cloud.spanner.SessionClient.SessionId;
 import com.google.cloud.spanner.TransactionRunnerImpl.TransactionContextImpl;
 import com.google.cloud.spanner.spi.v1.SpannerRpc;
+import com.google.cloud.spanner.tracing.DualSpan;
 import com.google.common.base.Preconditions;
 import com.google.protobuf.ByteString;
 import com.google.protobuf.Duration;
@@ -128,8 +130,8 @@ public class TransactionRunnerImplTest {
                     .build()));
     when(rpc.rollbackAsync(Mockito.any(RollbackRequest.class), Mockito.anyMap()))
         .thenReturn(ApiFutures.immediateFuture(Empty.getDefaultInstance()));
-    transactionRunner.setSpan(mock(Span.class));
-    transactionRunner.setOpenTelemetrySpan(mock(io.opentelemetry.api.trace.Span.class));
+    transactionRunner.setSpan(
+        new DualSpan(mock(Span.class), mock(io.opentelemetry.api.trace.Span.class)));
   }
 
   @SuppressWarnings("unchecked")
@@ -288,11 +290,10 @@ public class TransactionRunnerImplTest {
             throw new IllegalStateException();
           }
         };
-    session.setCurrentSpan(mock(Span.class));
-    session.setCurrentOpenTelemetrySpan(mock(io.opentelemetry.api.trace.Span.class));
+    session.setCurrentSpan(
+        new DualSpan(mock(Span.class), mock(io.opentelemetry.api.trace.Span.class)));
     TransactionRunnerImpl runner = new TransactionRunnerImpl(session);
-    runner.setSpan(mock(Span.class));
-    runner.setOpenTelemetrySpan(mock(io.opentelemetry.api.trace.Span.class));
+    runner.setSpan(new DualSpan(mock(Span.class), mock(io.opentelemetry.api.trace.Span.class)));
     assertThat(usedInlinedBegin).isFalse();
     runner.run(
         transaction -> {
@@ -323,8 +324,7 @@ public class TransactionRunnerImplTest {
             ApiFutures.immediateFuture(ByteString.copyFromUtf8(UUID.randomUUID().toString())));
     when(session.getName()).thenReturn(SessionId.of("p", "i", "d", "test").getName());
     TransactionRunnerImpl runner = new TransactionRunnerImpl(session);
-    runner.setSpan(mock(Span.class));
-    runner.setOpenTelemetrySpan(mock(io.opentelemetry.api.trace.Span.class));
+    runner.setSpan(new DualSpan(mock(Span.class), mock(io.opentelemetry.api.trace.Span.class)));
     ExecuteBatchDmlResponse response1 =
         ExecuteBatchDmlResponse.newBuilder()
             .addResultSets(

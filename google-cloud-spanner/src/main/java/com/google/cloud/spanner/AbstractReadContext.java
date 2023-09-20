@@ -37,7 +37,10 @@ import com.google.cloud.spanner.Options.QueryOption;
 import com.google.cloud.spanner.Options.ReadOption;
 import com.google.cloud.spanner.SessionImpl.SessionTransaction;
 import com.google.cloud.spanner.spi.v1.SpannerRpc;
+import com.google.cloud.spanner.tracing.DualSpan;
+import com.google.cloud.spanner.tracing.ISpan;
 import com.google.common.annotations.VisibleForTesting;
+import com.google.common.collect.ImmutableMap;
 import com.google.common.util.concurrent.MoreExecutors;
 import com.google.protobuf.ByteString;
 import com.google.spanner.v1.BeginTransactionRequest;
@@ -69,9 +72,10 @@ abstract class AbstractReadContext
   abstract static class Builder<B extends Builder<?, T>, T extends AbstractReadContext> {
     private SessionImpl session;
     private SpannerRpc rpc;
-    private io.opentelemetry.api.trace.Span openTelemetrySpan =
-        io.opentelemetry.api.trace.Span.fromContext(Context.current());
-    private Span span = Tracing.getTracer().getCurrentSpan();
+    private ISpan span =
+        new DualSpan(
+            Tracing.getTracer().getCurrentSpan(),
+            io.opentelemetry.api.trace.Span.fromContext(Context.current()));
     private int defaultPrefetchChunks = SpannerOptions.Builder.DEFAULT_PREFETCH_CHUNKS;
     private QueryOptions defaultQueryOptions = SpannerOptions.Builder.DEFAULT_QUERY_OPTIONS;
     private ExecutorProvider executorProvider;
@@ -93,13 +97,8 @@ abstract class AbstractReadContext
       return self();
     }
 
-    B setSpan(Span span) {
+    B setSpan(ISpan span) {
       this.span = span;
-      return self();
-    }
-
-    B setOpenTelemetrySpan(io.opentelemetry.api.trace.Span span) {
-      this.openTelemetrySpan = span;
       return self();
     }
 
@@ -356,7 +355,6 @@ abstract class AbstractReadContext
         if (transactionId != null) {
           return;
         }
-        OpenTelemetryTraceUtil.addEvent(openTelemetrySpan, "Creating Transaction");
         span.addAnnotation("Creating Transaction");
         try {
           TransactionOptions.Builder options = TransactionOptions.newBuilder();
@@ -383,16 +381,16 @@ abstract class AbstractReadContext
                 ErrorCode.INTERNAL, "Bad value in transaction.read_timestamp metadata field", e);
           }
           transactionId = transaction.getId();
-          OpenTelemetryTraceUtil.addEvent(
-              openTelemetrySpan,
-              "Transaction Creation Done",
-              OpenTelemetryTraceUtil.getTransactionAnnotations(transaction));
           span.addAnnotation(
-              "Transaction Creation Done", TraceUtil.getTransactionAnnotations(transaction));
+              "Transaction Creation Done",
+              ImmutableMap.of(
+                  "id",
+                  transaction.getId().toStringUtf8(),
+                  "Timestamp",
+                  Timestamp.fromProto(transaction.getReadTimestamp()).toString()));
+
         } catch (SpannerException e) {
-          OpenTelemetryTraceUtil.addEventWithException(
-              openTelemetrySpan, "Transaction Creation Failed", e);
-          span.addAnnotation("Transaction Creation Failed", TraceUtil.getExceptionAnnotations(e));
+          span.addAnnotation("Transaction Creation Failed", e);
           throw e;
         }
       }
@@ -403,8 +401,7 @@ abstract class AbstractReadContext
   final SessionImpl session;
   final SpannerRpc rpc;
   final ExecutorProvider executorProvider;
-  Span span;
-  io.opentelemetry.api.trace.Span openTelemetrySpan;
+  ISpan span;
   private final int defaultPrefetchChunks;
   private final QueryOptions defaultQueryOptions;
 
@@ -431,19 +428,19 @@ abstract class AbstractReadContext
     this.defaultPrefetchChunks = builder.defaultPrefetchChunks;
     this.defaultQueryOptions = builder.defaultQueryOptions;
     this.span = builder.span;
-    this.openTelemetrySpan = builder.openTelemetrySpan;
     this.executorProvider = builder.executorProvider;
   }
 
   @Override
-  public void setSpan(Span span) {
+  public void setSpan(ISpan span) {
     this.span = span;
   }
 
+  /**
+   * No-op method needed to implement SessionTransaction interface.
+   */
   @Override
-  public void setOpenTelemetrySpan(io.opentelemetry.api.trace.Span span) {
-    this.openTelemetrySpan = span;
-  }
+  public void setSpan(Span span) {}
 
   long getSeqNo() {
     return seqNo.incrementAndGet();
@@ -690,7 +687,6 @@ abstract class AbstractReadContext
             MAX_BUFFERED_CHUNKS,
             SpannerImpl.QUERY,
             span,
-            openTelemetrySpan,
             rpc.getExecuteQueryRetrySettings(),
             rpc.getExecuteQueryRetryableCodes()) {
           @Override
@@ -750,8 +746,7 @@ abstract class AbstractReadContext
 
   @Override
   public void close() {
-    OpenTelemetryTraceUtil.endSpan(openTelemetrySpan);
-    span.end(TraceUtil.END_SPAN_OPTIONS);
+    span.end();
     synchronized (lock) {
       isClosed = true;
     }
@@ -831,7 +826,6 @@ abstract class AbstractReadContext
             MAX_BUFFERED_CHUNKS,
             SpannerImpl.READ,
             span,
-            openTelemetrySpan,
             rpc.getReadRetrySettings(),
             rpc.getReadRetryableCodes()) {
           @Override

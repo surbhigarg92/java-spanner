@@ -41,7 +41,6 @@ import io.opentelemetry.sdk.trace.data.SpanData;
 import io.opentelemetry.sdk.trace.export.SimpleSpanProcessor;
 import java.io.IOException;
 import java.util.List;
-import java.util.concurrent.ScheduledThreadPoolExecutor;
 import java.util.stream.Collectors;
 import org.junit.After;
 import org.junit.AfterClass;
@@ -103,11 +102,7 @@ public class OpenTelemetrySpanTest {
             INVALID_UPDATE_STATEMENT,
             Status.INVALID_ARGUMENT.withDescription("invalid statement").asRuntimeException()));
     String uniqueName = InProcessServerBuilder.generateName();
-    server =
-        InProcessServerBuilder.forName(uniqueName)
-            .addService(mockSpanner)
-            .build()
-            .start();
+    server = InProcessServerBuilder.forName(uniqueName).addService(mockSpanner).build().start();
 
     channelProvider = LocalChannelProvider.create(uniqueName);
   }
@@ -162,24 +157,24 @@ public class OpenTelemetrySpanTest {
       while (rs.next()) {
         // Just consume the result set.
       }
-      List<String> spans =
-          spanExporter.getFinishedSpanItems().stream()
-              .map(SpanData::getName)
-              .distinct()
-              .collect(Collectors.toList());
-
-      boolean hasSpanData =
-          spans.stream()
-              .allMatch(
-                  name ->
-                      name.equals("CloudSpannerOperation.BatchCreateSessionsRequest")
-                          || name.equals("CloudSpannerOperation.ExecuteStreamingQuery")
-                          || name.equals("CloudSpannerOperation.BatchCreateSessions")
-                          || name.equals("CloudSpanner.ReadOnlyTransaction")
-                          || name.equals("SessionPool.WaitForSession"));
-      assertTrue(hasSpanData);
-      assertEquals(5, spans.size());
     }
+    List<String> spans =
+        spanExporter.getFinishedSpanItems().stream()
+            .map(SpanData::getName)
+            .distinct()
+            .collect(Collectors.toList());
+
+    boolean hasSpanData =
+        spans.stream()
+            .allMatch(
+                name ->
+                    name.equals("CloudSpannerOperation.BatchCreateSessionsRequest")
+                        || name.equals("CloudSpannerOperation.ExecuteStreamingQuery")
+                        || name.equals("CloudSpannerOperation.BatchCreateSessions")
+                        || name.equals("CloudSpanner.ReadOnlyTransaction")
+                        || name.equals("SessionPool.WaitForSession"));
+    assertTrue(hasSpanData);
+    assertEquals(5, spans.size());
   }
 
   @Test

@@ -33,11 +33,13 @@ import com.google.cloud.Date;
 import com.google.cloud.Timestamp;
 import com.google.cloud.spanner.Type.StructField;
 import com.google.cloud.spanner.spi.v1.SpannerRpc;
+import com.google.cloud.spanner.tracing.IScope;
+import com.google.cloud.spanner.tracing.ISpan;
+import com.google.cloud.spanner.tracing.TraceWrapper;
 import com.google.cloud.spanner.v1.stub.SpannerStubSettings;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.AbstractIterator;
-import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Lists;
 import com.google.common.util.concurrent.Uninterruptibles;
 import com.google.protobuf.ByteString;
@@ -50,12 +52,7 @@ import com.google.spanner.v1.ResultSetStats;
 import com.google.spanner.v1.Transaction;
 import com.google.spanner.v1.TypeCode;
 import io.grpc.Context;
-import io.opencensus.common.Scope;
-import io.opencensus.trace.AttributeValue;
-import io.opencensus.trace.Span;
-import io.opencensus.trace.Tracer;
 import io.opencensus.trace.Tracing;
-import io.opentelemetry.api.common.Attributes;
 import java.io.IOException;
 import java.io.Serializable;
 import java.math.BigDecimal;
@@ -83,7 +80,7 @@ import org.threeten.bp.Duration;
 
 /** Implementation of {@link ResultSet}. */
 abstract class AbstractResultSet<R> extends AbstractStructReader implements ResultSet {
-  private static final Tracer tracer = Tracing.getTracer();
+  private static final TraceWrapper tracer = new TraceWrapper(Tracing.getTracer());
   private static final com.google.protobuf.Value NULL_VALUE =
       com.google.protobuf.Value.newBuilder().setNullValue(NullValue.NULL_VALUE).build();
 
@@ -1094,8 +1091,7 @@ abstract class AbstractResultSet<R> extends AbstractStructReader implements Resu
     private final BackOff backOff;
     private final LinkedList<PartialResultSet> buffer = new LinkedList<>();
     private final int maxBufferSize;
-    private final Span span;
-    private final io.opentelemetry.api.trace.Span openTelemetrySpan;
+    private final ISpan span;
     private CloseableIterator<PartialResultSet> stream;
     private ByteString resumeToken;
     private boolean finished;
@@ -1109,16 +1105,12 @@ abstract class AbstractResultSet<R> extends AbstractStructReader implements Resu
     protected ResumableStreamIterator(
         int maxBufferSize,
         String streamName,
-        Span parent,
-        io.opentelemetry.api.trace.Span openTelemetryParent,
+        ISpan parent,
         RetrySettings streamingRetrySettings,
         Set<Code> retryableCodes) {
       checkArgument(maxBufferSize >= 0);
       this.maxBufferSize = maxBufferSize;
-      this.openTelemetrySpan =
-          OpenTelemetryTraceUtil.spanBuilderWithExplicitParent(
-              SpannerOptions.getTracer(), streamName, openTelemetryParent);
-      this.span = tracer.spanBuilderWithExplicitParent(streamName, parent).startSpan();
+      this.span = tracer.spanBuilderWithExplicitParent(streamName, parent);
       this.streamingRetrySettings = Preconditions.checkNotNull(streamingRetrySettings);
       this.retryableCodes = Preconditions.checkNotNull(retryableCodes);
       this.backOff = newBackOff();
@@ -1174,15 +1166,7 @@ abstract class AbstractResultSet<R> extends AbstractStructReader implements Resu
     }
 
     private void backoffSleep(Context context, long backoffMillis) throws SpannerException {
-      tracer
-          .getCurrentSpan()
-          .addAnnotation(
-              "Backing off",
-              ImmutableMap.of("Delay", AttributeValue.longAttributeValue(backoffMillis)));
-      OpenTelemetryTraceUtil.addEvent(
-          io.opentelemetry.api.trace.Span.fromContext(io.opentelemetry.context.Context.current()),
-          "Backing off",
-          Attributes.builder().put("Delay", backoffMillis).build());
+      tracer.getCurrentSpan().addAnnotation("Backing off", "Delay", backoffMillis);
       final CountDownLatch latch = new CountDownLatch(1);
       final Context.CancellationListener listener =
           ignored -> {
@@ -1222,8 +1206,7 @@ abstract class AbstractResultSet<R> extends AbstractStructReader implements Resu
     public void close(@Nullable String message) {
       if (stream != null) {
         stream.close(message);
-        span.end(TraceUtil.END_SPAN_OPTIONS);
-        OpenTelemetryTraceUtil.endSpan(openTelemetrySpan);
+        span.end();
         stream = null;
       }
     }
@@ -1239,20 +1222,12 @@ abstract class AbstractResultSet<R> extends AbstractStructReader implements Resu
       while (true) {
         // Eagerly start stream before consuming any buffered items.
         if (stream == null) {
-          OpenTelemetryTraceUtil.addEvent(
-              openTelemetrySpan,
-              "Starting/Resuming stream",
-              Attributes.builder()
-                  .put("ResumeToken", resumeToken == null ? "null" : resumeToken.toStringUtf8())
-                  .build());
           span.addAnnotation(
               "Starting/Resuming stream",
-              ImmutableMap.of(
-                  "ResumeToken",
-                  AttributeValue.stringAttributeValue(
-                      resumeToken == null ? "null" : resumeToken.toStringUtf8())));
-          try (Scope s = tracer.withSpan(span);
-              io.opentelemetry.context.Scope ss = openTelemetrySpan.makeCurrent()) {
+              "ResumeToken",
+              resumeToken == null ? "null" : resumeToken.toStringUtf8());
+
+          try (IScope sss = tracer.withSpan(span)) {
             // When start a new stream set the Span as current to make the gRPC Span a child of
             // this Span.
             stream = checkNotNull(startStream(resumeToken));
@@ -1292,13 +1267,8 @@ abstract class AbstractResultSet<R> extends AbstractStructReader implements Resu
           }
         } catch (SpannerException spannerException) {
           if (safeToRetry && isRetryable(spannerException)) {
-            OpenTelemetryTraceUtil.addEvent(
-                openTelemetrySpan,
-                "Stream broken. Safe to retry",
-                OpenTelemetryTraceUtil.getExceptionAnnotations(spannerException));
-            span.addAnnotation(
-                "Stream broken. Safe to retry",
-                TraceUtil.getExceptionAnnotations(spannerException));
+
+            span.addAnnotation("Stream broken. Safe to retry", spannerException);
             logger.log(Level.FINE, "Retryable exception, will sleep and retry", spannerException);
             // Truncate any items in the buffer before the last retry token.
             while (!buffer.isEmpty() && buffer.getLast().getResumeToken().isEmpty()) {
@@ -1306,8 +1276,7 @@ abstract class AbstractResultSet<R> extends AbstractStructReader implements Resu
             }
             assert buffer.isEmpty() || buffer.getLast().getResumeToken().equals(resumeToken);
             stream = null;
-            try (Scope s = tracer.withSpan(span);
-                io.opentelemetry.context.Scope ss = openTelemetrySpan.makeCurrent()) {
+            try (IScope s = tracer.withSpan(span)) {
               long delay = spannerException.getRetryDelayInMillis();
               if (delay != -1) {
                 backoffSleep(context, delay);
@@ -1318,17 +1287,12 @@ abstract class AbstractResultSet<R> extends AbstractStructReader implements Resu
 
             continue;
           }
-          span.addAnnotation("Stream broken. Not safe to retry");
-          TraceUtil.setWithFailure(span, spannerException);
-          OpenTelemetryTraceUtil.addEventWithExceptionAndSetFailure(
-              openTelemetrySpan, "Stream broken. Safe to retry", spannerException);
+          span.addAnnotation("Stream broken. Not safe to retry", spannerException);
+          span.setStatus(spannerException);
           throw spannerException;
         } catch (RuntimeException e) {
-          span.addAnnotation("Stream broken. Not safe to retry");
-          TraceUtil.setWithFailure(span, e);
-          OpenTelemetryTraceUtil.addEventWithExceptionAndSetFailure(
-              openTelemetrySpan, "Stream broken. Safe to retry", e);
-
+          span.addAnnotation("Stream broken. Not safe to retry", e);
+          span.setStatus(e);
           throw e;
         }
       }

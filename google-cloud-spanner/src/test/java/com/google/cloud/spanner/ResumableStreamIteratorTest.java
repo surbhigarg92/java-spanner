@@ -24,6 +24,8 @@ import static org.mockito.Mockito.verify;
 
 import com.google.api.client.util.BackOff;
 import com.google.cloud.spanner.AbstractResultSet.ResumableStreamIterator;
+import com.google.cloud.spanner.tracing.DualSpan;
+import com.google.cloud.spanner.tracing.ISpan;
 import com.google.cloud.spanner.v1.stub.SpannerStubSettings;
 import com.google.common.collect.AbstractIterator;
 import com.google.common.collect.Lists;
@@ -36,7 +38,6 @@ import io.grpc.Metadata;
 import io.grpc.Status;
 import io.grpc.StatusRuntimeException;
 import io.grpc.protobuf.ProtoUtils;
-import io.opencensus.trace.EndSpanOptions;
 import io.opencensus.trace.Span;
 import java.io.IOException;
 import java.lang.reflect.Field;
@@ -141,7 +142,6 @@ public class ResumableStreamIteratorTest {
             maxBufferSize,
             "",
             null,
-            null,
             SpannerStubSettings.newBuilder().executeStreamingSqlSettings().getRetrySettings(),
             SpannerStubSettings.newBuilder().executeStreamingSqlSettings().getRetryableCodes()) {
           @Override
@@ -169,14 +169,8 @@ public class ResumableStreamIteratorTest {
         "This test is only supported on JDK11 and lower",
         JavaVersionUtil.getJavaMajorVersion() < 12);
 
-    Span span = mock(Span.class);
-    io.opentelemetry.api.trace.Span openTelemetrySpan = mock(io.opentelemetry.api.trace.Span.class);
+    ISpan span = new DualSpan(mock(Span.class), mock(io.opentelemetry.api.trace.Span.class));
     setInternalState(ResumableStreamIterator.class, this.resumableStreamIterator, "span", span);
-    setInternalState(
-        ResumableStreamIterator.class,
-        this.resumableStreamIterator,
-        "openTelemetrySpan",
-        openTelemetrySpan);
 
     ResultSetStream s1 = Mockito.mock(ResultSetStream.class);
     Mockito.when(starter.startStream(null)).thenReturn(new ResultSetIterator(s1));
@@ -187,8 +181,7 @@ public class ResumableStreamIteratorTest {
     assertThat(consume(resumableStreamIterator)).containsExactly("a", "b").inOrder();
 
     resumableStreamIterator.close("closed");
-    verify(span).end(EndSpanOptions.builder().setSampleToLocalSpanStore(true).build());
-    verify(openTelemetrySpan).end();
+    verify(span).end();
   }
 
   @Test

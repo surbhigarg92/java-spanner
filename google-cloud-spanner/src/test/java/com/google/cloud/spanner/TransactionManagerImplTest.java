@@ -20,6 +20,7 @@ import static com.google.common.truth.Truth.assertThat;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertThrows;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.eq;
 import static org.mockito.Mockito.mock;
@@ -34,6 +35,7 @@ import com.google.cloud.grpc.GrpcTransportOptions;
 import com.google.cloud.grpc.GrpcTransportOptions.ExecutorFactory;
 import com.google.cloud.spanner.TransactionManager.TransactionState;
 import com.google.cloud.spanner.spi.v1.SpannerRpc;
+import com.google.cloud.spanner.tracing.DualSpan;
 import com.google.protobuf.ByteString;
 import com.google.protobuf.Empty;
 import com.google.spanner.v1.BeginTransactionRequest;
@@ -82,7 +84,7 @@ public class TransactionManagerImplTest {
     initMocks(this);
     manager =
         new TransactionManagerImpl(
-            session, mock(Span.class), mock(io.opentelemetry.api.trace.Span.class));
+            session, new DualSpan(mock(Span.class), mock(io.opentelemetry.api.trace.Span.class)));
   }
 
   @Test

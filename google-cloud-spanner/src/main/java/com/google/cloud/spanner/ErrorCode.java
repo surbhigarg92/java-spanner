@@ -65,7 +65,8 @@ public enum ErrorCode {
     return this.code.value();
   }
 
-  Status getGrpcStatus() {
+  /** @return the corresponding gRPC status of this {@link Status}. */
+  public Status getGrpcStatus() {
     return this.code.toStatus();
   }
 

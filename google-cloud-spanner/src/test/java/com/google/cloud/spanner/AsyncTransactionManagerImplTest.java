@@ -22,6 +22,7 @@ import static org.mockito.Mockito.when;
 
 import com.google.api.core.ApiFutures;
 import com.google.cloud.Timestamp;
+import com.google.cloud.spanner.tracing.DualSpan;
 import io.opencensus.trace.Span;
 import org.junit.Test;
 import org.junit.runner.RunWith;
@@ -39,8 +40,7 @@ public class AsyncTransactionManagerImplTest {
     try (AsyncTransactionManagerImpl manager =
         new AsyncTransactionManagerImpl(
             session,
-            mock(Span.class),
-            mock(io.opentelemetry.api.trace.Span.class),
+            new DualSpan(mock(Span.class), mock(io.opentelemetry.api.trace.Span.class)),
             Options.commitStats())) {
       when(session.newTransaction(Options.fromTransactionOptions(Options.commitStats())))
           .thenReturn(transaction);
