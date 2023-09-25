@@ -185,11 +185,11 @@ class SessionImpl implements Session {
       }
       requestBuilder.setRequestOptions(requestOptionsBuilder.build());
     }
+    CommitRequest request = requestBuilder.build();
     ISpan span = tracer.spanBuilder(SpannerImpl.COMMIT);
     try (IScope s = tracer.withSpan(span)) {
-      com.google.spanner.v1.CommitResponse response =
-          spanner.getRpc().commit(requestBuilder.build(), this.options);
-      return new CommitResponse(response);
+      return SpannerRetryHelper.runTxWithRetriesOnAborted(
+          () -> new CommitResponse(spanner.getRpc().commit(request, this.options)));
     } catch (RuntimeException e) {
       span.setStatus(e);
       throw e;
