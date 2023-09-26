@@ -52,6 +52,7 @@ import com.google.api.core.ApiFuture;
 import com.google.api.core.ApiFutures;
 import com.google.api.core.SettableApiFuture;
 import com.google.api.gax.core.ExecutorProvider;
+import com.google.api.gax.rpc.ServerStream;
 import com.google.cloud.Timestamp;
 import com.google.cloud.grpc.GrpcTransportOptions;
 import com.google.cloud.grpc.GrpcTransportOptions.ExecutorFactory;
@@ -82,6 +83,7 @@ import com.google.common.util.concurrent.ListenableFuture;
 import com.google.common.util.concurrent.MoreExecutors;
 import com.google.common.util.concurrent.SettableFuture;
 import com.google.protobuf.Empty;
+import com.google.spanner.v1.BatchWriteResponse;
 import com.google.spanner.v1.ResultSetStats;
 import io.opencensus.metrics.DerivedLongCumulative;
 import io.opencensus.metrics.DerivedLongGauge;
@@ -1186,6 +1188,17 @@ class SessionPool {
     }
 
     @Override
+    public ServerStream<BatchWriteResponse> batchWriteAtLeastOnce(
+        Iterable<MutationGroup> mutationGroups, TransactionOption... options)
+        throws SpannerException {
+      try {
+        return get().batchWriteAtLeastOnce(mutationGroups, options);
+      } finally {
+        close();
+      }
+    }
+
+    @Override
     public ReadContext singleUse() {
       try {
         return new AutoClosingReadContext<>(
@@ -1473,6 +1486,18 @@ class SessionPool {
       try {
         markUsed();
         return delegate.writeAtLeastOnceWithOptions(mutations, options);
+      } catch (SpannerException e) {
+        throw lastException = e;
+      }
+    }
+
+    @Override
+    public ServerStream<BatchWriteResponse> batchWriteAtLeastOnce(
+        Iterable<MutationGroup> mutationGroups, TransactionOption... options)
+        throws SpannerException {
+      try {
+        markUsed();
+        return delegate.batchWriteAtLeastOnce(mutationGroups, options);
       } catch (SpannerException e) {
         throw lastException = e;
       }

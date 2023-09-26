@@ -16,6 +16,7 @@
 
 package com.google.cloud.spanner;
 
+import com.google.api.gax.rpc.ServerStream;
 import com.google.cloud.Timestamp;
 import com.google.cloud.spanner.Options.TransactionOption;
 import com.google.cloud.spanner.Options.UpdateOption;
@@ -27,6 +28,10 @@ import com.google.cloud.spanner.tracing.TraceWrapper;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Function;
 import com.google.common.util.concurrent.ListenableFuture;
+import com.google.spanner.v1.BatchWriteResponse;
+import io.opencensus.common.Scope;
+import io.opencensus.trace.Span;
+import io.opencensus.trace.Tracer;
 import io.opencensus.trace.Tracing;
 import javax.annotation.Nullable;
 
@@ -97,6 +102,21 @@ class DatabaseClientImpl implements DatabaseClient {
     try (IScope s = tracer.withSpan(span)) {
       return runWithSessionRetry(
           session -> session.writeAtLeastOnceWithOptions(mutations, options));
+    } catch (RuntimeException e) {
+      span.setStatus(e);
+      throw e;
+    } finally {
+      span.end();
+    }
+  }
+
+  @Override
+  public ServerStream<BatchWriteResponse> batchWriteAtLeastOnce(
+      final Iterable<MutationGroup> mutationGroups, final TransactionOption... options)
+      throws SpannerException {
+    ISpan span = tracer.spanBuilder(READ_WRITE_TRANSACTION);
+    try (IScope s = tracer.withSpan(span)) {
+      return runWithSessionRetry(session -> session.batchWriteAtLeastOnce(mutationGroups, options));
     } catch (RuntimeException e) {
       span.setStatus(e);
       throw e;
