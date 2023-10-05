@@ -188,7 +188,7 @@ class SessionImpl implements Session {
           () -> new CommitResponse(spanner.getRpc().commit(request, this.options)));
     } catch (RuntimeException e) {
       span.setStatus(e);
-      throw e;
+      throw SpannerExceptionFactory.newSpannerException(e);
     } finally {
       span.end();
     }
@@ -222,14 +222,14 @@ class SessionImpl implements Session {
     if (batchWriteRequestOptions != null) {
       requestBuilder.setRequestOptions(batchWriteRequestOptions);
     }
-    Span span = tracer.spanBuilder(SpannerImpl.BATCH_WRITE).startSpan();
-    try (Scope s = tracer.withSpan(span)) {
+    ISpan span = tracer.spanBuilder(SpannerImpl.BATCH_WRITE);
+    try (IScope s = tracer.withSpan(span)) {
       return spanner.getRpc().batchWriteAtLeastOnce(requestBuilder.build(), this.options);
     } catch (Throwable e) {
-      TraceUtil.setWithFailure(span, e);
+      span.setStatus(e);
       throw SpannerExceptionFactory.newSpannerException(e);
     } finally {
-      span.end(TraceUtil.END_SPAN_OPTIONS);
+      span.end();
     }
   }
 
