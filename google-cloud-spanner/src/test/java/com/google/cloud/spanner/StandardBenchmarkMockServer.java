@@ -49,7 +49,9 @@ class StandardBenchmarkMockServer {
   private static final int EXECUTE_SQL_MIN_TIME = 10;
   private static final int EXECUTE_SQL_RND_TIME = 10;
 
-  static final Statement UPDATE_STATEMENT = Statement.of("UPDATE FOO SET BAR=1 WHERE BAZ=2");
+  static final Statement UPDATE_STATEMENT =
+      Statement.of(
+          "UPDATE PLAYERS SET first_name='random' WHERE uuid='2b7e0098-a5cc-4f32-aabd-b978fc6b9711'");
   static final Statement INVALID_UPDATE_STATEMENT =
       Statement.of("UPDATE NON_EXISTENT_TABLE SET BAR=1 WHERE BAZ=2");
   static final long UPDATE_COUNT = 1L;
