@@ -46,7 +46,7 @@ public class IntegrationTestEnv extends ExternalResource {
   /** Names a property that provides the class name of the {@link TestEnvConfig} to use. */
   public static final String TEST_ENV_CONFIG_CLASS_NAME = "spanner.testenv.config.class";
 
-  public static final String CONFIG_CLASS = System.getProperty(TEST_ENV_CONFIG_CLASS_NAME, null);
+  public static final String CONFIG_CLASS = System.getProperty(TEST_ENV_CONFIG_CLASS_NAME, "com.google.cloud.spanner.GceTestEnvConfig");
 
   /**
    * Names a property that, if set, identifies an existing Cloud Spanner instance to use for tests.
@@ -95,7 +95,8 @@ public class IntegrationTestEnv extends ExternalResource {
     this.config.setUp();
 
     SpannerOptions options = config.spannerOptions();
-    String instanceProperty = System.getProperty(TEST_INSTANCE_PROPERTY, "");
+    String instanceProperty = "projects/span-cloud-testing/instances/surbhi-testing";
+    // String instanceProperty = System.getProperty(TEST_INSTANCE_PROPERTY, "");
     InstanceId instanceId;
     if (!instanceProperty.isEmpty() && !alwaysCreateNewInstance) {
       instanceId = InstanceId.of(instanceProperty);

@@ -20,6 +20,7 @@ import static com.google.common.truth.Truth.assertThat;
 
 import com.google.auth.oauth2.GoogleCredentials;
 import com.google.cloud.opentelemetry.metric.GoogleCloudMetricExporter;
+import com.google.cloud.opentelemetry.metric.MetricConfiguration;
 import com.google.cloud.opentelemetry.trace.TraceExporter;
 import com.google.cloud.spanner.spi.v1.SpannerMetrics;
 import com.google.cloud.spanner.spi.v1.SpannerRpcViews;
@@ -39,7 +40,9 @@ import io.opentelemetry.api.OpenTelemetry;
 import io.opentelemetry.api.trace.propagation.W3CTraceContextPropagator;
 import io.opentelemetry.context.propagation.ContextPropagators;
 import io.opentelemetry.sdk.OpenTelemetrySdk;
+import io.opentelemetry.sdk.metrics.InstrumentSelector;
 import io.opentelemetry.sdk.metrics.SdkMeterProvider;
+import io.opentelemetry.sdk.metrics.View;
 import io.opentelemetry.sdk.metrics.export.MetricExporter;
 import io.opentelemetry.sdk.metrics.export.PeriodicMetricReader;
 import io.opentelemetry.sdk.trace.SdkTracerProvider;
@@ -130,9 +133,13 @@ public class SessionPoolBenchmark {
     @Setup(Level.Invocation)
     public void setup() throws Exception {
       SpannerMetrics.enableRPCMetrics();
+      SpannerMetrics.enableSessionMetrics();
       SpanExporter traceExporter = TraceExporter.createWithDefaultConfiguration();
+      
       MetricExporter cloudMonitoringExporter =
           GoogleCloudMetricExporter.createWithDefaultConfiguration();
+      // MetricExporter cloudMonitoringExporter =
+      //     GoogleCloudMetricExporter.createWithConfiguration(MetricConfiguration.builder().setPrefix("custom.googleapis.com/OpenCensus/cloud.google.com/javapoc").build());
       SdkTracerProvider tracerProvider =
           SdkTracerProvider.builder()
               .addSpanProcessor(BatchSpanProcessor.builder(traceExporter).build())
@@ -140,11 +147,13 @@ public class SessionPoolBenchmark {
 
       SdkMeterProvider sdkMeterProvider =
           SdkMeterProvider.builder()
+              //.registerView(InstrumentSelector.builder().setName("surbhi/max_allowed_sessions").build(), 
+              //View.builder().setName("Opencensus/cloud.google.com/javapoc2/spanner/max_allowed_sessions").build())
               .registerMetricReader(PeriodicMetricReader.builder(cloudMonitoringExporter).build())
               .build();
       GlobalOpenTelemetry.resetForTest();
-      OpenTelemetry openTelemetry =
-          OpenTelemetrySdk.builder()
+      
+      OpenTelemetrySdk.builder()
               .setPropagators(ContextPropagators.create(W3CTraceContextPropagator.getInstance()))
               .setTracerProvider(tracerProvider)
               .setMeterProvider(sdkMeterProvider)
