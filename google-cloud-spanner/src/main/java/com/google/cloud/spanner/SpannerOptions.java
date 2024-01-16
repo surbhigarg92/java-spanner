@@ -78,13 +78,13 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
+import javax.annotation.concurrent.GuardedBy;
 import org.threeten.bp.Duration;
 
 /** Options for the Cloud Spanner service. */
 public class SpannerOptions extends ServiceOptions<Spanner, SpannerOptions> {
   private static final long serialVersionUID = 2789571558532701170L;
   private static SpannerEnvironment environment = SpannerEnvironmentImpl.INSTANCE;
-  private static boolean enableOpenTelemetryTraces = false;
   private static boolean enableOpenCensusMetrics = true;
   private static boolean enableOpenTelemetryMetrics = false;
 
@@ -153,6 +153,9 @@ public class SpannerOptions extends ServiceOptions<Spanner, SpannerOptions> {
     OPEN_TELEMETRY
   }
 
+  private static final Object lock = new Object();
+
+  @GuardedBy("lock")
   private static TracingFramework activeTracingFramework;
 
   /** Interface that can be used to provide {@link CallCredentials} to {@link SpannerOptions}. */
@@ -1255,7 +1258,10 @@ public class SpannerOptions extends ServiceOptions<Spanner, SpannerOptions> {
       return this;
     }
 
-    /** Sets opentelemetry object. */
+    /**
+     * Sets OpenTelemetry object to be used for Spanner Metrics and Traces. GlobalOpenTelemetry will
+     * be used as fallback if this options is not set.
+     */
     public Builder setOpenTelemetry(OpenTelemetry openTelemetry) {
       this.openTelemetry = openTelemetry;
       return this;
@@ -1304,8 +1310,11 @@ public class SpannerOptions extends ServiceOptions<Spanner, SpannerOptions> {
         this.numChannels =
             this.grpcGcpExtensionEnabled ? GRPC_GCP_ENABLED_DEFAULT_CHANNELS : DEFAULT_CHANNELS;
       }
-      if (activeTracingFramework == null) {
-        activeTracingFramework = TracingFramework.OPEN_CENSUS;
+
+      synchronized (lock) {
+        if (activeTracingFramework == null) {
+          activeTracingFramework = TracingFramework.OPEN_CENSUS;
+        }
       }
       return new SpannerOptions(this);
     }
@@ -1341,23 +1350,28 @@ public class SpannerOptions extends ServiceOptions<Spanner, SpannerOptions> {
    * default, OpenCensus traces are enabled.
    */
   public static void enableOpenTelemetryTraces() {
-    if (activeTracingFramework != null
-        && activeTracingFramework != TracingFramework.OPEN_TELEMETRY) {
-      throw new IllegalStateException(
-          "ActiveTracingFramework is set to OpenCensus. Cannot be reset.");
+    synchronized (lock) {
+      if (activeTracingFramework != null
+          && activeTracingFramework != TracingFramework.OPEN_TELEMETRY) {
+        throw new IllegalStateException(
+            "ActiveTracingFramework is set to OpenCensus and cannot be reset after SpannerOptions object is created.");
+      }
+      activeTracingFramework = TracingFramework.OPEN_TELEMETRY;
     }
-    activeTracingFramework = TracingFramework.OPEN_TELEMETRY;
   }
 
   /** Enables OpenCensus traces. Enabling OpenCensus traces will disable OpenTelemetry traces. */
   @ObsoleteApi(
       "The OpenCensus project is deprecated. Use enableOpenTelemetryTraces to switch to OpenTelemetry traces")
   public static void enableOpenCensusTraces() {
-    if (activeTracingFramework != null && activeTracingFramework != TracingFramework.OPEN_CENSUS) {
-      throw new IllegalStateException(
-          "ActiveTracingFramework is set to OpenTelemetry. Cannot be reset.");
+    synchronized (lock) {
+      if (activeTracingFramework != null
+          && activeTracingFramework != TracingFramework.OPEN_CENSUS) {
+        throw new IllegalStateException(
+            "ActiveTracingFramework is set to OpenTelemetry and cannot be reset after SpannerOptions object is created.");
+      }
+      activeTracingFramework = TracingFramework.OPEN_CENSUS;
     }
-    activeTracingFramework = TracingFramework.OPEN_CENSUS;
   }
 
   @ObsoleteApi(
@@ -1371,9 +1385,15 @@ public class SpannerOptions extends ServiceOptions<Spanner, SpannerOptions> {
   }
 
   public static TracingFramework getActiveTracingFramework() {
-    return activeTracingFramework;
+    synchronized (lock) {
+      if (activeTracingFramework == null) {
+        return TracingFramework.OPEN_CENSUS;
+      }
+      return activeTracingFramework;
+    }
   }
 
+  /** Disables OpenCensus metrics. Disable OpenCensus metrics before creating Spanner client. */
   public static void disableOpenCensusMetrics() {
     SpannerOptions.enableOpenCensusMetrics = false;
   }
@@ -1387,17 +1407,13 @@ public class SpannerOptions extends ServiceOptions<Spanner, SpannerOptions> {
     return SpannerOptions.enableOpenCensusMetrics;
   }
 
+  /** Enables OpenTelemetry metrics. Enable OpenTelemetry metrics before creating Spanner client. */
   public static void enableOpenTelemetryMetrics() {
     SpannerOptions.enableOpenTelemetryMetrics = true;
   }
 
   public static boolean isEnabledOpenTelemetryMetrics() {
     return SpannerOptions.enableOpenTelemetryMetrics;
-  }
-
-  @VisibleForTesting
-  public static void disableOpenTelemetryMetrics() {
-    SpannerOptions.enableOpenTelemetryMetrics = false;
   }
 
   @Override
