@@ -25,6 +25,7 @@ import com.google.common.base.Stopwatch;
 import com.google.common.util.concurrent.ListenableFuture;
 import com.google.common.util.concurrent.ListeningScheduledExecutorService;
 import com.google.common.util.concurrent.MoreExecutors;
+import io.opencensus.contrib.grpc.metrics.RpcViews;
 import java.time.Duration;
 import java.util.ArrayList;
 import java.util.List;
@@ -72,8 +73,8 @@ public class DefaultBenchmark extends AbstractLatencyBenchmark {
   public static class BenchmarkState {
 
     // TODO(developer): Add your values here for PROJECT_ID, INSTANCE_ID, DATABASE_ID
-    private static final String INSTANCE_ID = "";
-    private static final String DATABASE_ID = "";
+    private static final String INSTANCE_ID = "harsha-test-gcloud";
+    private static final String DATABASE_ID = "multiplexed_session_java";
     private static final String SERVER_URL = "https://staging-wrenchworks.sandbox.googleapis.com";
     private Spanner spanner;
     private DatabaseClientImpl client;
@@ -86,6 +87,7 @@ public class DefaultBenchmark extends AbstractLatencyBenchmark {
 
     @Setup(Level.Iteration)
     public void setup() throws Exception {
+      RpcViews.registerClientGrpcBasicViews();
       SpannerOptions options =
           SpannerOptions.newBuilder()
               .setSessionPoolOption(
@@ -94,7 +96,7 @@ public class DefaultBenchmark extends AbstractLatencyBenchmark {
                       .setMaxSessions(maxSessions)
                       .setWaitForMinSessions(org.threeten.bp.Duration.ofSeconds(20))
                       .build())
-              .setHost(SERVER_URL)
+              // .setHost(SERVER_URL)
               .setNumChannels(NUM_GRPC_CHANNELS)
               .build();
       spanner = options.getService();
