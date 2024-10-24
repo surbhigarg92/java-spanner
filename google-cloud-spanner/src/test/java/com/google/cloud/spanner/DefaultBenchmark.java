@@ -26,11 +26,20 @@ import com.google.common.base.Stopwatch;
 import com.google.common.util.concurrent.ListenableFuture;
 import com.google.common.util.concurrent.ListeningScheduledExecutorService;
 import com.google.common.util.concurrent.MoreExecutors;
+import io.grpc.opentelemetry.GrpcOpenTelemetry;
 import io.opencensus.contrib.grpc.metrics.RpcViews;
 import io.opencensus.exporter.stats.stackdriver.StackdriverStatsExporter;
+import io.opentelemetry.api.OpenTelemetry;
+import io.opentelemetry.api.trace.Span;
+import io.opentelemetry.exporter.otlp.metrics.OtlpGrpcMetricExporter;
+import io.opentelemetry.sdk.OpenTelemetrySdk;
+import io.opentelemetry.sdk.metrics.SdkMeterProvider;
+import io.opentelemetry.sdk.metrics.export.PeriodicMetricReader;
 import java.io.IOException;
 import java.time.Duration;
 import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.HashSet;
 import java.util.List;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ThreadLocalRandom;
@@ -96,6 +105,19 @@ public class DefaultBenchmark extends AbstractLatencyBenchmark {
       } catch (IOException | IllegalStateException e) {
         System.out.println("Error during StackdriverStatsExporter");
       }
+      SpannerOptions.enableOpenTelemetryMetrics();
+      SdkMeterProvider sdkMeterProvider = SdkMeterProvider.builder()
+          // Use Otlp exporter or any other exporter of your choice.
+          .registerMetricReader(
+              PeriodicMetricReader.builder(OtlpGrpcMetricExporter.builder().build()).build())
+          .build();
+      OpenTelemetry openTelemetry = OpenTelemetrySdk.builder()
+          .setMeterProvider(sdkMeterProvider)
+          // .setTracerProvider(sdkTracerProvider)
+          .buildAndRegisterGlobal();
+      GrpcOpenTelemetry grpcOpenTelemetry = GrpcOpenTelemetry.newBuilder().enableMetrics(new HashSet<>(
+          Arrays.asList("grpc.client.attempt.duration"))).sdk(openTelemetry).build();
+      grpcOpenTelemetry.registerGlobal();
       SpannerRpcViews.registerGfeLatencyView();
       SpannerOptions options =
           SpannerOptions.newBuilder()
