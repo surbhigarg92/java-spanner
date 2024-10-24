@@ -26,6 +26,8 @@ import com.google.common.util.concurrent.ListenableFuture;
 import com.google.common.util.concurrent.ListeningScheduledExecutorService;
 import com.google.common.util.concurrent.MoreExecutors;
 import io.opencensus.contrib.grpc.metrics.RpcViews;
+import io.opencensus.exporter.stats.stackdriver.StackdriverStatsExporter;
+import java.io.IOException;
 import java.time.Duration;
 import java.util.ArrayList;
 import java.util.List;
@@ -88,6 +90,11 @@ public class DefaultBenchmark extends AbstractLatencyBenchmark {
     @Setup(Level.Iteration)
     public void setup() throws Exception {
       RpcViews.registerClientGrpcBasicViews();
+      try {
+        StackdriverStatsExporter.createAndRegister();
+      } catch (IOException | IllegalStateException e) {
+        System.out.println("Error during StackdriverStatsExporter");
+      }
       SpannerOptions options =
           SpannerOptions.newBuilder()
               .setSessionPoolOption(
