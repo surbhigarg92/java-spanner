@@ -21,6 +21,7 @@ import static com.google.common.truth.Truth.assertThat;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
 
+import com.google.cloud.spanner.spi.v1.SpannerRpcViews;
 import com.google.common.base.Stopwatch;
 import com.google.common.util.concurrent.ListenableFuture;
 import com.google.common.util.concurrent.ListeningScheduledExecutorService;
@@ -95,6 +96,7 @@ public class DefaultBenchmark extends AbstractLatencyBenchmark {
       } catch (IOException | IllegalStateException e) {
         System.out.println("Error during StackdriverStatsExporter");
       }
+      SpannerRpcViews.registerGfeLatencyView();
       SpannerOptions options =
           SpannerOptions.newBuilder()
               .setSessionPoolOption(
