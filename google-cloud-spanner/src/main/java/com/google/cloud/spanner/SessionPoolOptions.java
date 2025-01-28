@@ -891,7 +891,7 @@ public class SessionPoolOptions {
     // session is created for the first time during client initialization.
     // This is only used for tests.
     @VisibleForTesting
-    Builder setSkipVerifyingBeginTransactionForMuxRW(
+    public Builder setSkipVerifyingBeginTransactionForMuxRW(
         boolean skipVerifyingBeginTransactionForMuxRW) {
       this.skipVerifyingBeginTransactionForMuxRW = skipVerifyingBeginTransactionForMuxRW;
       return this;
@@ -937,7 +937,7 @@ public class SessionPoolOptions {
     }
 
     @VisibleForTesting
-    Builder setFailOnSessionLeak() {
+    public Builder setFailOnSessionLeak() {
       this.actionOnSessionLeak = ActionOnSessionLeak.FAIL;
       return this;
     }

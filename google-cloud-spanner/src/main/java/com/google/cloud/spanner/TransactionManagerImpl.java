@@ -19,6 +19,9 @@ package com.google.cloud.spanner;
 import com.google.cloud.Timestamp;
 import com.google.cloud.spanner.Options.TransactionOption;
 import com.google.cloud.spanner.SessionImpl.SessionTransaction;
+import com.google.cloud.spanner.instrument.IScope;
+import com.google.cloud.spanner.instrument.ISpan;
+import com.google.cloud.spanner.instrument.TraceWrapper;
 import com.google.common.base.Preconditions;
 import com.google.protobuf.ByteString;
 

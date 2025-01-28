@@ -38,7 +38,7 @@ import org.junit.AfterClass;
 import org.junit.Before;
 import org.junit.BeforeClass;
 
-abstract class AbstractMockServerTest {
+public abstract class AbstractMockServerTest {
   protected static MockSpannerServiceImpl mockSpanner;
   public static MockInstanceAdminImpl mockInstanceAdmin;
   public static MockDatabaseAdminImpl mockDatabaseAdmin;
@@ -114,7 +114,7 @@ abstract class AbstractMockServerTest {
     mockSpanner.removeAllExecutionTimes();
   }
 
-  void addUpdateDdlResponse() {
+  public void addUpdateDdlResponse() {
     mockDatabaseAdmin.addResponse(
         Operation.newBuilder()
             .setMetadata(
@@ -128,7 +128,7 @@ abstract class AbstractMockServerTest {
             .build());
   }
 
-  void addUpdateDdlError() {
+  public void addUpdateDdlError() {
     mockDatabaseAdmin.addResponse(
         Operation.newBuilder()
             .setMetadata(

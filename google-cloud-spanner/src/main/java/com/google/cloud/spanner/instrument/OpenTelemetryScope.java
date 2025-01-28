@@ -14,20 +14,20 @@
  * limitations under the License.
  */
 
-package com.google.cloud.spanner;
+package com.google.cloud.spanner.instrument;
 
-import io.opencensus.common.Scope;
+import io.opentelemetry.context.Scope;
 
-class OpenCensusScope implements IScope {
+class OpenTelemetryScope implements IScope {
 
-  private final Scope openCensusScope;
+  private final Scope openTelemetryScope;
 
-  OpenCensusScope(Scope openCensusScope) {
-    this.openCensusScope = openCensusScope;
+  OpenTelemetryScope(Scope openTelemetryScope) {
+    this.openTelemetryScope = openTelemetryScope;
   }
 
   @Override
   public void close() {
-    openCensusScope.close();
+    openTelemetryScope.close();
   }
 }

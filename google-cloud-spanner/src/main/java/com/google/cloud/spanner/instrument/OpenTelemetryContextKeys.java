@@ -1,5 +1,5 @@
 /*
- * Copyright 2023 Google LLC
+ * Copyright 2024 Google LLC
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,13 +14,17 @@
  * limitations under the License.
  */
 
-package com.google.cloud.spanner;
+package com.google.cloud.spanner.instrument;
+
+import com.google.api.core.InternalApi;
+import io.opentelemetry.context.ContextKey;
 
 /**
- * This interface represents a scope that wraps both OpenCensus and OpenTelemetry scopes. It extends
- * the AutoCloseable interface and overrides the close method that does not throw an exception.
+ * Keys for OpenTelemetry context variables that are used by the Spanner client library. Only
+ * intended for internal use.
  */
-interface IScope extends AutoCloseable {
-  @Override
-  void close();
+@InternalApi
+public class OpenTelemetryContextKeys {
+  @InternalApi
+  public static final ContextKey<String> THREAD_NAME_KEY = ContextKey.named("thread.name");
 }

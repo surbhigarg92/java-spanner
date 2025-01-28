@@ -1,5 +1,5 @@
 /*
- * Copyright 2024 Google LLC
+ * Copyright 2023 Google LLC
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,17 +14,20 @@
  * limitations under the License.
  */
 
-package com.google.cloud.spanner;
+package com.google.cloud.spanner.instrument;
 
-import com.google.api.core.InternalApi;
-import io.opentelemetry.context.ContextKey;
+import io.opencensus.common.Scope;
 
-/**
- * Keys for OpenTelemetry context variables that are used by the Spanner client library. Only
- * intended for internal use.
- */
-@InternalApi
-public class OpenTelemetryContextKeys {
-  @InternalApi
-  public static final ContextKey<String> THREAD_NAME_KEY = ContextKey.named("thread.name");
+class OpenCensusScope implements IScope {
+
+  private final Scope openCensusScope;
+
+  OpenCensusScope(Scope openCensusScope) {
+    this.openCensusScope = openCensusScope;
+  }
+
+  @Override
+  public void close() {
+    openCensusScope.close();
+  }
 }

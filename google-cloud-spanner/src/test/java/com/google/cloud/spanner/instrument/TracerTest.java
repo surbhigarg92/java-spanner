@@ -1,5 +1,5 @@
 /*
- * Copyright 2023 Google LLC
+ * Copyright 2021 Google LLC
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,20 +14,14 @@
  * limitations under the License.
  */
 
-package com.google.cloud.spanner;
+package com.google.cloud.spanner.instrument;
 
-import io.opentelemetry.context.Scope;
-
-class OpenTelemetryScope implements IScope {
-
-  private final Scope openTelemetryScope;
-
-  OpenTelemetryScope(Scope openTelemetryScope) {
-    this.openTelemetryScope = openTelemetryScope;
-  }
-
-  @Override
-  public void close() {
-    openTelemetryScope.close();
-  }
-}
+/**
+ * Tests marked with this {@link org.junit.experimental.categories.Category} will be executed in a
+ * separate execution with the maven-surefire plugin. The tests will be excluded from execution with
+ * the maven-failsafe plugin.
+ *
+ * <p>Separate execution prevents the injection of any custom tracing configuration from interfering
+ * with other tests, as most tracing configuration is stored in static final variables.
+ */
+public interface TracerTest {}

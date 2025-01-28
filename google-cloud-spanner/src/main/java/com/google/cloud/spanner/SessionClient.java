@@ -21,6 +21,8 @@ import static com.google.common.base.Preconditions.checkNotNull;
 
 import com.google.api.pathtemplate.PathTemplate;
 import com.google.cloud.grpc.GrpcTransportOptions.ExecutorFactory;
+import com.google.cloud.spanner.instrument.IScope;
+import com.google.cloud.spanner.instrument.ISpan;
 import com.google.cloud.spanner.spi.v1.SpannerRpc;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableMap;

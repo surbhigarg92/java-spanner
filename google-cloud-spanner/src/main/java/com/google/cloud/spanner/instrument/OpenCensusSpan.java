@@ -14,8 +14,10 @@
  * limitations under the License.
  */
 
-package com.google.cloud.spanner;
+package com.google.cloud.spanner.instrument;
 
+import com.google.cloud.spanner.ErrorCode;
+import com.google.cloud.spanner.SpannerException;
 import com.google.common.collect.ImmutableMap;
 import io.opencensus.contrib.grpc.util.StatusConverter;
 import io.opencensus.trace.AttributeValue;
@@ -27,7 +29,7 @@ import java.util.Map;
 
 public class OpenCensusSpan implements ISpan {
 
-  static final EndSpanOptions END_SPAN_OPTIONS =
+  public static final EndSpanOptions END_SPAN_OPTIONS =
       EndSpanOptions.builder().setSampleToLocalSpanStore(true).build();
   private final Span openCensusSpan;
 

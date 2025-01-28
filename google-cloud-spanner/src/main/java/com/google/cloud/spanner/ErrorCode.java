@@ -65,7 +65,7 @@ public enum ErrorCode {
     return this.code.value();
   }
 
-  Status getGrpcStatus() {
+  public Status getGrpcStatus() {
     return this.code.toStatus();
   }
 

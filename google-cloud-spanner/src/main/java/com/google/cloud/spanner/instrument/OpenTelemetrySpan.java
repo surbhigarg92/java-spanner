@@ -14,19 +14,24 @@
  * limitations under the License.
  */
 
-package com.google.cloud.spanner;
+package com.google.cloud.spanner.instrument;
 
+import com.google.cloud.spanner.ErrorCode;
+import com.google.cloud.spanner.SpannerException;
+import com.google.common.annotations.VisibleForTesting;
 import io.opentelemetry.api.common.Attributes;
 import io.opentelemetry.api.common.AttributesBuilder;
 import io.opentelemetry.api.trace.Span;
 import io.opentelemetry.api.trace.StatusCode;
 import java.util.Map;
 
-class OpenTelemetrySpan implements ISpan {
+@VisibleForTesting
+public class OpenTelemetrySpan implements ISpan {
 
   private final io.opentelemetry.api.trace.Span openTelemetrySpan;
 
-  OpenTelemetrySpan(Span openTelemetrySpan) {
+  @VisibleForTesting
+  public OpenTelemetrySpan(Span openTelemetrySpan) {
     this.openTelemetrySpan = openTelemetrySpan;
   }
 

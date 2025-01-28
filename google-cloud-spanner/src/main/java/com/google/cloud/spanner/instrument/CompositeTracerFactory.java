@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package com.google.cloud.spanner;
+package com.google.cloud.spanner.instrument;
 
 import com.google.api.core.InternalApi;
 import com.google.api.gax.tracing.ApiTracer;

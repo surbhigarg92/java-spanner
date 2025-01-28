@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package com.google.cloud.spanner;
+package com.google.cloud.spanner.instrument;
 
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.times;

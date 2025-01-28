@@ -25,7 +25,7 @@ import static com.google.cloud.spanner.spi.v1.SpannerRpcViews.SPANNER_GFE_LATENC
 
 import com.google.api.gax.tracing.ApiTracer;
 import com.google.cloud.spanner.BuiltInMetricsConstant;
-import com.google.cloud.spanner.CompositeTracer;
+import com.google.cloud.spanner.instrument.CompositeTracer;
 import com.google.cloud.spanner.SpannerExceptionFactory;
 import com.google.cloud.spanner.SpannerRpcMetrics;
 import com.google.common.cache.Cache;

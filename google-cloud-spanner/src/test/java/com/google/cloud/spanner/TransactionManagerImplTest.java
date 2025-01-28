@@ -36,6 +36,8 @@ import com.google.cloud.Timestamp;
 import com.google.cloud.grpc.GrpcTransportOptions;
 import com.google.cloud.grpc.GrpcTransportOptions.ExecutorFactory;
 import com.google.cloud.spanner.TransactionManager.TransactionState;
+import com.google.cloud.spanner.instrument.OpenTelemetrySpan;
+import com.google.cloud.spanner.instrument.TraceWrapper;
 import com.google.cloud.spanner.spi.v1.SpannerRpc;
 import com.google.cloud.spanner.v1.stub.SpannerStubSettings;
 import com.google.protobuf.ByteString;

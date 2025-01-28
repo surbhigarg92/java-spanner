@@ -14,8 +14,9 @@
  * limitations under the License.
  */
 
-package com.google.cloud.spanner;
+package com.google.cloud.spanner.instrument;
 
+import com.google.api.core.InternalApi;
 import com.google.api.gax.tracing.ApiTracer;
 import com.google.api.gax.tracing.ApiTracerFactory;
 import com.google.api.gax.tracing.SpanName;
@@ -27,11 +28,12 @@ import io.opentelemetry.context.Context;
 import javax.annotation.Nonnull;
 
 /** {@link ApiTracerFactory} that can be used with OpenTelemetry tracing. */
-class OpenTelemetryApiTracerFactory implements ApiTracerFactory {
+@InternalApi
+public class OpenTelemetryApiTracerFactory implements ApiTracerFactory {
   @Nonnull private final Tracer internalTracer;
   @Nonnull private final Attributes spanAttributes;
 
-  OpenTelemetryApiTracerFactory(
+  public OpenTelemetryApiTracerFactory(
       @Nonnull Tracer internalTracer, @Nonnull Attributes spanAttributes) {
     this.internalTracer = Preconditions.checkNotNull(internalTracer);
     this.spanAttributes = spanAttributes;

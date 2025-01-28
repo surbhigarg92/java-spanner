@@ -19,6 +19,7 @@ package com.google.cloud.spanner;
 import com.google.cloud.spanner.SessionPool.PooledSession;
 import com.google.cloud.spanner.SessionPool.PooledSessionFuture;
 import com.google.cloud.spanner.SessionPool.SessionFutureWrapper;
+import com.google.cloud.spanner.instrument.TraceWrapper;
 import com.google.cloud.spanner.testing.RemoteSpannerHelper;
 import io.opentelemetry.api.common.Attributes;
 

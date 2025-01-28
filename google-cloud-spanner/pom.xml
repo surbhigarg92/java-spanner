@@ -55,7 +55,7 @@
             <!-- Executes unit tests -->
             <id>default-test</id>
             <configuration>
-              <excludedGroups>com.google.cloud.spanner.TracerTest,com.google.cloud.spanner.IntegrationTest</excludedGroups>
+              <excludedGroups>com.google.cloud.spanner.instrument.TracerTest,com.google.cloud.spanner.IntegrationTest</excludedGroups>
 
               <!-- These configurations are only needed for native tests. The native profile
              in shared-config uses maven-surefire to run both unit tests and integration tests -->
@@ -74,7 +74,7 @@
               <goal>test</goal>
             </goals>
             <configuration>
-              <groups>com.google.cloud.spanner.TracerTest</groups>
+              <groups>com.google.cloud.spanner.instrument.TracerTest</groups>
             </configuration>
           </execution>
         </executions>
@@ -371,7 +371,7 @@
       <artifactId>junit</artifactId>
       <scope>test</scope>
     </dependency>
-    
+
     <!-- Executor tests - The 'provided' scope is overwritten to compile time scope for the profile 'executor-tests' -->
     <dependency>
       <groupId>com.google.api.grpc</groupId>

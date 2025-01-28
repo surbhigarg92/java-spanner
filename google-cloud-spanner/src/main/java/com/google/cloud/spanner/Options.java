@@ -401,14 +401,14 @@ public final class Options implements Serializable {
     }
   }
 
-  static final class TagOption extends InternalOption implements ReadQueryUpdateTransactionOption {
+  public static final class TagOption extends InternalOption implements ReadQueryUpdateTransactionOption {
     private final String tag;
 
     TagOption(String tag) {
       this.tag = tag;
     }
 
-    String getTag() {
+    public String getTag() {
       return tag;
     }
 
@@ -566,11 +566,11 @@ public final class Options implements Serializable {
     return priority == null ? null : priority.proto;
   }
 
-  boolean hasTag() {
+  public boolean hasTag() {
     return tag != null;
   }
 
-  String tag() {
+  public String tag() {
     return tag;
   }
 

@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package com.google.cloud.spanner;
+package com.google.cloud.spanner.instrument;
 
 import com.google.errorprone.annotations.concurrent.GuardedBy;
 import io.opencensus.common.Clock;

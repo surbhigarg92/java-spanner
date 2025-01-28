@@ -31,6 +31,7 @@ import com.google.cloud.spanner.SessionPool.PooledSession;
 import com.google.cloud.spanner.SessionPool.PooledSessionFuture;
 import com.google.cloud.spanner.SessionPool.Position;
 import com.google.cloud.spanner.SessionPool.SessionConsumerImpl;
+import com.google.cloud.spanner.instrument.TraceWrapper;
 import com.google.common.base.Preconditions;
 import io.opencensus.trace.Tracing;
 import io.opentelemetry.api.OpenTelemetry;

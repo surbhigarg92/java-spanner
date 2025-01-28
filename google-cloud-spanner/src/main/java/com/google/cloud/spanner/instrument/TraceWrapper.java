@@ -14,12 +14,16 @@
  * limitations under the License.
  */
 
-package com.google.cloud.spanner;
+package com.google.cloud.spanner.instrument;
 
 import com.google.api.gax.core.GaxProperties;
+import com.google.cloud.spanner.DatabaseId;
+import com.google.cloud.spanner.Options;
 import com.google.cloud.spanner.Options.TagOption;
 import com.google.cloud.spanner.Options.TransactionOption;
+import com.google.cloud.spanner.SpannerOptions;
 import com.google.cloud.spanner.SpannerOptions.TracingFramework;
+import com.google.cloud.spanner.Statement;
 import com.google.common.base.MoreObjects;
 import io.opencensus.trace.BlankSpan;
 import io.opencensus.trace.Span;
@@ -34,7 +38,7 @@ import java.util.Optional;
 import java.util.stream.Collectors;
 import java.util.stream.StreamSupport;
 
-class TraceWrapper {
+public class TraceWrapper {
   private static final AttributeKey<String> TRANSACTION_TAG_KEY =
       AttributeKey.stringKey("transaction.tag");
   private static final AttributeKey<String> STATEMENT_TAG_KEY =
@@ -59,7 +63,7 @@ class TraceWrapper {
   private final io.opentelemetry.api.trace.Tracer openTelemetryTracer;
   private final boolean enableExtendedTracing;
 
-  TraceWrapper(
+  public TraceWrapper(
       Tracer openCensusTracer,
       io.opentelemetry.api.trace.Tracer openTelemetryTracer,
       boolean enableExtendedTracing) {
@@ -68,15 +72,15 @@ class TraceWrapper {
     this.enableExtendedTracing = enableExtendedTracing;
   }
 
-  ISpan spanBuilder(String spanName) {
+  public ISpan spanBuilder(String spanName) {
     return spanBuilder(spanName, Attributes.empty());
   }
 
-  ISpan spanBuilder(String spanName, Attributes commonAttributes, TransactionOption... options) {
+  public ISpan spanBuilder(String spanName, Attributes commonAttributes, TransactionOption... options) {
     return spanBuilder(spanName, createTransactionAttributes(commonAttributes, options));
   }
 
-  ISpan spanBuilder(String spanName, Attributes attributes) {
+  public ISpan spanBuilder(String spanName, Attributes attributes) {
     if (SpannerOptions.getActiveTracingFramework().equals(TracingFramework.OPEN_TELEMETRY)) {
       return new OpenTelemetrySpan(
           openTelemetryTracer.spanBuilder(spanName).setAllAttributes(attributes).startSpan());
@@ -85,11 +89,11 @@ class TraceWrapper {
     }
   }
 
-  ISpan spanBuilderWithExplicitParent(String spanName, ISpan parentSpan) {
+  public ISpan spanBuilderWithExplicitParent(String spanName, ISpan parentSpan) {
     return spanBuilderWithExplicitParent(spanName, parentSpan, Attributes.empty());
   }
 
-  ISpan spanBuilderWithExplicitParent(String spanName, ISpan parentSpan, Attributes attributes) {
+  public ISpan spanBuilderWithExplicitParent(String spanName, ISpan parentSpan, Attributes attributes) {
     if (SpannerOptions.getActiveTracingFramework().equals(TracingFramework.OPEN_TELEMETRY)) {
       OpenTelemetrySpan otParentSpan = (OpenTelemetrySpan) parentSpan;
 
@@ -111,7 +115,7 @@ class TraceWrapper {
     }
   }
 
-  ISpan getCurrentSpan() {
+  public ISpan getCurrentSpan() {
     if (SpannerOptions.getActiveTracingFramework().equals(TracingFramework.OPEN_TELEMETRY)) {
       return new OpenTelemetrySpan(
           io.opentelemetry.api.trace.Span.fromContext(io.opentelemetry.context.Context.current()));
@@ -120,7 +124,7 @@ class TraceWrapper {
     }
   }
 
-  ISpan getBlankSpan() {
+  public ISpan getBlankSpan() {
     if (SpannerOptions.getActiveTracingFramework().equals(TracingFramework.OPEN_TELEMETRY)) {
       return new OpenTelemetrySpan(io.opentelemetry.api.trace.Span.getInvalid());
     } else {
@@ -128,7 +132,7 @@ class TraceWrapper {
     }
   }
 
-  IScope withSpan(ISpan span) {
+  public IScope withSpan(ISpan span) {
     if (SpannerOptions.getActiveTracingFramework().equals(TracingFramework.OPEN_TELEMETRY)) {
       OpenTelemetrySpan openTelemetrySpan;
       if (!(span instanceof OpenTelemetrySpan)) {
@@ -164,7 +168,7 @@ class TraceWrapper {
     return builder.build();
   }
 
-  Attributes createStatementAttributes(Statement statement, Options options) {
+  public Attributes createStatementAttributes(Statement statement, Options options) {
     if (this.enableExtendedTracing || (options != null && options.hasTag())) {
       AttributesBuilder builder = Attributes.builder();
       if (this.enableExtendedTracing) {
@@ -179,7 +183,7 @@ class TraceWrapper {
     return Attributes.empty();
   }
 
-  Attributes createStatementBatchAttributes(Iterable<Statement> statements, Options options) {
+  public Attributes createStatementBatchAttributes(Iterable<Statement> statements, Options options) {
     if (this.enableExtendedTracing || (options != null && options.hasTag())) {
       AttributesBuilder builder = Attributes.builder();
       if (this.enableExtendedTracing) {
@@ -198,7 +202,7 @@ class TraceWrapper {
     return Attributes.empty();
   }
 
-  Attributes createTableAttributes(String tableName, Options options) {
+  public Attributes createTableAttributes(String tableName, Options options) {
     AttributesBuilder builder = Attributes.builder();
     builder.put(DB_TABLE_NAME_KEY, tableName);
     if (options != null && options.hasTag()) {
@@ -207,7 +211,7 @@ class TraceWrapper {
     return builder.build();
   }
 
-  Attributes createCommonAttributes(DatabaseId db) {
+  public Attributes createCommonAttributes(DatabaseId db) {
     AttributesBuilder builder = Attributes.builder();
     builder.put(DB_NAME_KEY, db.getDatabase());
     builder.put(INSTANCE_NAME_KEY, db.getInstanceId().getInstance());

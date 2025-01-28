@@ -14,11 +14,14 @@
  * limitations under the License.
  */
 
-package com.google.cloud.spanner;
+package com.google.cloud.spanner.instrument;
 
+import com.google.api.core.InternalApi;
+import com.google.cloud.spanner.ErrorCode;
 import java.util.Map;
 
-interface ISpan {
+@InternalApi
+public interface ISpan {
 
   /**
    * Adds an annotation to the OpenCensus and OpenTelemetry span.

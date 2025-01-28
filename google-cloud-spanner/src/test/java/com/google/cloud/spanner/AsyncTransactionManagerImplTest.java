@@ -27,6 +27,8 @@ import static org.mockito.Mockito.when;
 
 import com.google.api.core.ApiFutures;
 import com.google.cloud.Timestamp;
+import com.google.cloud.spanner.instrument.ISpan;
+import com.google.cloud.spanner.instrument.OpenTelemetrySpan;
 import com.google.protobuf.ByteString;
 import io.opentelemetry.api.trace.Span;
 import io.opentelemetry.context.Scope;

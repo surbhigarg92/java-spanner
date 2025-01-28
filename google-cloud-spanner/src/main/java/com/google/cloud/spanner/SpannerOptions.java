@@ -50,6 +50,8 @@ import com.google.cloud.spanner.admin.database.v1.DatabaseAdminSettings;
 import com.google.cloud.spanner.admin.database.v1.stub.DatabaseAdminStubSettings;
 import com.google.cloud.spanner.admin.instance.v1.InstanceAdminSettings;
 import com.google.cloud.spanner.admin.instance.v1.stub.InstanceAdminStubSettings;
+import com.google.cloud.spanner.instrument.CompositeTracerFactory;
+import com.google.cloud.spanner.instrument.OpenTelemetryApiTracerFactory;
 import com.google.cloud.spanner.spi.SpannerRpcFactory;
 import com.google.cloud.spanner.spi.v1.GapicSpannerRpc;
 import com.google.cloud.spanner.spi.v1.SpannerRpc;
@@ -174,7 +176,7 @@ public class SpannerOptions extends ServiceOptions<Spanner, SpannerOptions> {
   private final boolean enableEndToEndTracing;
   private final String monitoringHost;
 
-  enum TracingFramework {
+  public enum TracingFramework {
     OPEN_CENSUS,
     OPEN_TELEMETRY
   }
@@ -1708,7 +1710,7 @@ public class SpannerOptions extends ServiceOptions<Spanner, SpannerOptions> {
   @ObsoleteApi(
       "The OpenCensus project is deprecated. Use enableOpenTelemetryTraces to switch to OpenTelemetry traces")
   @VisibleForTesting
-  static void resetActiveTracingFramework() {
+  public static void resetActiveTracingFramework() {
     activeTracingFramework = null;
   }
 

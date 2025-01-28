@@ -25,6 +25,10 @@ import static org.mockito.Mockito.when;
 
 import com.google.api.client.util.BackOff;
 import com.google.cloud.spanner.ErrorHandler.DefaultErrorHandler;
+import com.google.cloud.spanner.instrument.ISpan;
+import com.google.cloud.spanner.instrument.OpenCensusSpan;
+import com.google.cloud.spanner.instrument.OpenTelemetrySpan;
+import com.google.cloud.spanner.instrument.TraceWrapper;
 import com.google.cloud.spanner.v1.stub.SpannerStubSettings;
 import com.google.common.collect.AbstractIterator;
 import com.google.common.collect.ImmutableList;

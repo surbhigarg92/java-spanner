@@ -635,7 +635,7 @@
     <differenceType>7005</differenceType>
     <className>com/google/cloud/spanner/PartitionedDmlTransaction</className>
     <method>void setSpan(io.opencensus.trace.Span)</method>
-    <to>void setSpan(com.google.cloud.spanner.ISpan)</to>
+    <to>void setSpan(com.google.cloud.spanner.instrument.ISpan)</to>
   </difference>
 
   <!-- Added DirectedReadOptions -->
@@ -765,7 +765,7 @@
     <className>com/google/cloud/spanner/connection/Connection</className>
     <method>boolean isKeepTransactionAlive()</method>
   </difference>
-  
+
   <!-- Automatic DML batching -->
   <difference>
     <differenceType>7012</differenceType>
@@ -797,7 +797,7 @@
     <className>com/google/cloud/spanner/connection/Connection</className>
     <method>boolean isAutoBatchDmlUpdateCountVerification()</method>
   </difference>
-  
+
   <!-- Retry DML as Partitioned DML -->
   <difference>
     <differenceType>7012</differenceType>
@@ -821,5 +821,5 @@
     <className>com/google/cloud/spanner/connection/Connection</className>
     <method>java.lang.Object runTransaction(com.google.cloud.spanner.connection.Connection$TransactionCallable)</method>
   </difference>
-  
+
 </differences>
