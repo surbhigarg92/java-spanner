@@ -24,6 +24,7 @@ import io.opentelemetry.api.common.Attributes;
 import io.opentelemetry.api.common.AttributesBuilder;
 import io.opentelemetry.api.metrics.DoubleHistogram;
 import io.opentelemetry.api.metrics.Meter;
+import io.opentelemetry.context.Context;
 import java.util.Map;
 
 /**
@@ -70,7 +71,8 @@ class BuiltInMetricsRecorder extends OpenTelemetryMetricsRecorder {
    * @param attributes Map of the attributes to store
    */
   void recordGFELatency(double gfeLatency, Map<String, String> attributes) {
-    gfeLatencyRecorder.record(gfeLatency, toOtelAttributes(attributes));
+    // By default current context is picked up.
+    gfeLatencyRecorder.record(gfeLatency, toOtelAttributes(attributes), Context.current());
   }
 
   Attributes toOtelAttributes(Map<String, String> attributes) {

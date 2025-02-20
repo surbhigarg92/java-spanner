@@ -21,6 +21,8 @@ import com.google.api.gax.rpc.StatusCode;
 import com.google.api.gax.tracing.ApiTracer;
 import com.google.api.gax.tracing.MethodName;
 import com.google.api.gax.tracing.MetricsTracer;
+import io.opentelemetry.api.common.Attributes;
+import io.opentelemetry.api.common.AttributesBuilder;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.concurrent.CancellationException;
@@ -38,13 +40,23 @@ class BuiltInMetricsTracer extends MetricsTracer implements ApiTracer {
   // These are RPC specific attributes and pertain to a specific API Trace
   private final Map<String, String> attributes = new HashMap<>();
 
+  private final TraceWrapper traceWrapper;
+
   private Long gfeLatency = null;
 
   BuiltInMetricsTracer(
-      MethodName methodName, BuiltInMetricsRecorder builtInOpenTelemetryMetricsRecorder) {
+      MethodName methodName,
+      BuiltInMetricsRecorder builtInOpenTelemetryMetricsRecorder,
+      TraceWrapper traceWrapper) {
     super(methodName, builtInOpenTelemetryMetricsRecorder);
     this.builtInOpenTelemetryMetricsRecorder = builtInOpenTelemetryMetricsRecorder;
     this.attributes.put(METHOD_ATTRIBUTE, methodName.toString());
+    // Metrics attributes which are filtered from metrics views are sent to exemplars as
+    // filtered_attributes.
+    // Below testmetric attribute will be available in exemplar as we have added a attributefilter
+    // for our metric views.
+    this.attributes.put("testmetric", "testm");
+    this.traceWrapper = traceWrapper;
   }
 
   /**
@@ -53,11 +65,20 @@ class BuiltInMetricsTracer extends MetricsTracer implements ApiTracer {
    */
   @Override
   public void attemptSucceeded() {
-    super.attemptSucceeded();
-    if (gfeLatency != null) {
+    // For exemplars to worj metrics should be recorded with the span context.
+    // Creating a new span to verify this.
+    ISpan currentSpan = this.traceWrapper.getCurrentSpan();
+    AttributesBuilder builder = Attributes.builder();
+    builder.put("test1", "abc");
+    ISpan span = this.traceWrapper.spanBuilder("attempt succeeded", builder.build());
+    try (IScope s = this.traceWrapper.withSpan(span)) {
+      super.attemptSucceeded();
       attributes.put(STATUS_ATTRIBUTE, StatusCode.Code.OK.toString());
-      builtInOpenTelemetryMetricsRecorder.recordGFELatency(gfeLatency, attributes);
+      if (gfeLatency != null) {
+        builtInOpenTelemetryMetricsRecorder.recordGFELatency(gfeLatency, attributes);
+      }
     }
+    span.end();
   }
 
   /**

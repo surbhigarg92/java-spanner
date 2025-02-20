@@ -39,6 +39,7 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Range;
 import io.grpc.ManagedChannelBuilder;
 import io.grpc.Status;
+import io.opencensus.trace.Tracing;
 import io.opentelemetry.api.OpenTelemetry;
 import io.opentelemetry.api.common.Attributes;
 import io.opentelemetry.sdk.OpenTelemetrySdk;
@@ -131,7 +132,8 @@ public class OpenTelemetryBuiltInMetricsTracerTest extends AbstractNettyMockServ
     ApiTracerFactory metricsTracerFactory =
         new BuiltInMetricsTracerFactory(
             new BuiltInMetricsRecorder(openTelemetry, BuiltInMetricsConstant.METER_NAME),
-            attributes);
+            attributes,
+            new TraceWrapper(Tracing.getTracer(), OpenTelemetry.noop().getTracer(""), true));
     // Set a quick polling algorithm to prevent this from slowing down the test unnecessarily.
     builder
         .getDatabaseAdminStubSettingsBuilder()

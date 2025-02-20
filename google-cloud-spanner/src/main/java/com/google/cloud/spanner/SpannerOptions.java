@@ -72,6 +72,7 @@ import io.grpc.MethodDescriptor;
 import io.grpc.netty.shaded.io.grpc.netty.GrpcSslContexts;
 import io.grpc.netty.shaded.io.grpc.netty.NettyChannelBuilder;
 import io.grpc.netty.shaded.io.netty.handler.ssl.SslContext;
+import io.opencensus.trace.Tracing;
 import io.opentelemetry.api.GlobalOpenTelemetry;
 import io.opentelemetry.api.OpenTelemetry;
 import io.opentelemetry.api.common.Attributes;
@@ -164,7 +165,7 @@ public class SpannerOptions extends ServiceOptions<Spanner, SpannerOptions> {
   private final boolean attemptDirectPath;
   private final DirectedReadOptions directedReadOptions;
   private final boolean useVirtualThreads;
-  private final OpenTelemetry openTelemetry;
+  private OpenTelemetry openTelemetry;
   private final boolean enableApiTracing;
   private final boolean enableBuiltInMetrics;
   private final boolean enableExtendedTracing;
@@ -1858,6 +1859,9 @@ public class SpannerOptions extends ServiceOptions<Spanner, SpannerOptions> {
       return this.openTelemetry;
     } else {
       return GlobalOpenTelemetry.get();
+      // this.openTelemetry = this.builtInMetricsProvider.getOrCreateOpenTelemetry(
+      //     this.getProjectId(), getCredentials(), this.monitoringHost);
+      // return this.openTelemetry;
     }
   }
 
@@ -1910,11 +1914,19 @@ public class SpannerOptions extends ServiceOptions<Spanner, SpannerOptions> {
         this.builtInMetricsProvider.getOrCreateOpenTelemetry(
             this.getProjectId(), getCredentials(), this.monitoringHost);
 
+    // this.openTelemetry = openTelemetry;
+
     return openTelemetry != null
         ? new BuiltInMetricsTracerFactory(
             new BuiltInMetricsRecorder(openTelemetry, BuiltInMetricsConstant.METER_NAME),
             builtInMetricsProvider.createClientAttributes(
-                this.getProjectId(), "spanner-java/" + GaxProperties.getLibraryVersion(getClass())))
+                this.getProjectId(), "spanner-java/" + GaxProperties.getLibraryVersion(getClass())),
+            new TraceWrapper(
+                Tracing.getTracer(),
+                openTelemetry.getTracer(
+                    MetricRegistryConstants.INSTRUMENTATION_SCOPE,
+                    GaxProperties.getLibraryVersion(getClass())),
+                true))
         : null;
   }
 

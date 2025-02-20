@@ -36,7 +36,6 @@ import java.time.Instant;
 import java.util.concurrent.TimeUnit;
 import org.junit.BeforeClass;
 import org.junit.ClassRule;
-import org.junit.Ignore;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 import org.junit.runner.RunWith;
@@ -44,7 +43,6 @@ import org.junit.runners.JUnit4;
 
 @Category(ParallelIntegrationTest.class)
 @RunWith(JUnit4.class)
-@Ignore("Built-in Metrics are not GA'ed yet. Enable this test once the metrics are released")
 public class ITBuiltInMetricsTest {
 
   private static Database db;
@@ -76,9 +74,11 @@ public class ITBuiltInMetricsTest {
             .setEndTime(Timestamps.fromMillis(end.toEpochMilli()))
             .build();
 
-    client
-        .readWriteTransaction()
-        .run(transaction -> transaction.executeQuery(Statement.of("Select 1")));
+    for (int i = 0; i < 100; i++) {
+      client
+          .readWriteTransaction()
+          .run(transaction -> transaction.executeQuery(Statement.of("Select 1")));
+    }
 
     String metricFilter =
         String.format(
